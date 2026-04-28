@@ -1,0 +1,3493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Micromise Auto Solutions — ECU Remapping &amp; Diagnostics</title>
+<meta name="description" content="UK-based ECU remapping and automotive diagnostics. Remaps, DPF, AdBlue, EGR fixes for cars, vans and fleet. Done properly, done once, done right.">
+<meta property="og:title" content="Micromise Auto Solutions — UK ECU Remapping">
+<meta property="og:description" content="Your engine has more to give — and we're unlocking it.">
+<meta name="theme-color" content="#0a0a0b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;0,900;1,700;1,900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #E8001D;
+    --red-deep: #7a0010;
+    --red-bright: #ff2a3d;
+    --red-glow: rgba(232,0,29,0.25);
+    --red-glow-soft: rgba(232,0,29,0.1);
+    --black: #080808;
+    --dark: #0e0e0e;
+    --card: #121212;
+    --font-mono: 'JetBrains Mono', monospace;
+    --card-border: #1e1e1e;
+    --card-hover: #181818;
+    --white: #FFFFFF;
+    --grey: #888888;
+    --grey-light: #aaaaaa;
+    --grey-dark: #444444;
+    --font-display: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      linear-gradient(180deg, #050507 0%, #0c0c0e 35%, #050507 70%, #0a0a0c 100%);
+    background-attachment: fixed;
+    color: var(--white);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    cursor: default;
+    position: relative;
+  }
+  /* Global film grain — subtle texture over everything */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  /* Cursor follower (desktop only) */
+  .rp-cursor {
+    position: fixed;
+    top: 0; left: 0;
+    width: 10px; height: 10px;
+    background: var(--red);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+    transition: width 0.25s ease, height 0.25s ease, opacity 0.25s ease;
+    box-shadow: 0 0 14px rgba(232,0,29,0.55);
+    opacity: 0;
+  }
+  .rp-cursor.active { opacity: 1; }
+  .rp-cursor.hover { width: 28px; height: 28px; }
+  @media (hover: none) { .rp-cursor { display: none; } }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--black); }
+  ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 2px; }
+
+  /* ─── SOCIAL SIDEBAR ─── */
+  .social-sidebar {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 998;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    background: rgba(8,8,8,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid #1e1e1e;
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    transition: all 0.3s ease;
+  }
+  .social-sidebar:hover {
+    background: rgba(14,14,14,0.95);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 20px rgba(232,0,29,0.08);
+  }
+  .social-sidebar::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(to bottom, transparent, var(--red));
+    opacity: 0.5;
+  }
+  .social-sidebar::after {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(to top, transparent, var(--red));
+    opacity: 0.5;
+  }
+  .social-sidebar-label {
+    font-family: var(--font-display);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #333;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1e1e1e;
+  }
+  .social-sidebar a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    color: #555;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    position: relative;
+    margin: 4px 0;
+  }
+  .social-sidebar a svg {
+    width: 18px;
+    height: 18px;
+    transition: all 0.25s ease;
+  }
+  .social-sidebar a:hover {
+    background: rgba(232,0,29,0.1);
+    color: var(--red);
+    transform: scale(1.15);
+  }
+  .social-sidebar a:hover svg {
+    filter: drop-shadow(0 0 8px rgba(232,0,29,0.5));
+  }
+  .social-sidebar .social-tooltip {
+    position: absolute;
+    left: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #161616;
+    border: 1px solid #2a2a2a;
+    color: var(--white);
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  .social-sidebar .social-tooltip::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 5px solid #2a2a2a;
+  }
+  .social-sidebar a:hover .social-tooltip {
+    opacity: 1;
+    left: 46px;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px;
+    height: 68px;
+    background: rgba(8,8,8,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid #161616;
+    transition: background 0.3s;
+  }
+  nav.scrolled { background: rgba(8,8,8,0.98); }
+
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px; text-decoration: none;
+    flex-shrink: 0;
+  }
+  .logo-img {
+    height: 52px; width: auto;
+    display: block;
+    object-fit: contain;
+    filter: brightness(1.3) contrast(1.1);
+    image-rendering: -webkit-optimize-contrast;
+  }
+  .logo-img-footer {
+    height: 44px; width: auto;
+    display: block;
+    object-fit: contain;
+    filter: brightness(1.25) contrast(1.1);
+    opacity: 1;
+    transition: filter 0.2s, opacity 0.2s;
+  }
+  .logo-img-footer:hover { filter: brightness(1.5) contrast(1.1); opacity: 1; }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 4px;
+    list-style: none;
+  }
+  .nav-links li a {
+    font-family: var(--font-display); font-size: 11px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--grey-light);
+    text-decoration: none; padding: 6px 14px;
+    transition: color 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .nav-links li a::before { content: '//'; color: var(--red); font-size: 10px; }
+  .nav-links li a:hover { color: var(--white); }
+
+  .nav-cta {
+    background: var(--red); color: var(--white); border: none;
+    font-family: var(--font-display); font-size: 12px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 10px 22px; border-radius: 3px; cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px var(--red-glow);
+  }
+  .nav-cta:hover { background: #ff0020; box-shadow: 0 0 35px rgba(232,0,29,0.5); transform: translateY(-1px); }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    padding-top: 68px;
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    align-items: center;
+    gap: 0;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    /* Real car image blended into the dark background — sharper, more premium */
+    background-image:
+      /* Lighter side vignette so the car is visible, headline still readable via gradient on copy side */
+      linear-gradient(to right, rgba(4,4,5,0.92) 0%, rgba(4,4,5,0.45) 26%, rgba(4,4,5,0.0) 50%, rgba(4,4,5,0.20) 75%, rgba(4,4,5,0.78) 100%),
+      /* Top/bottom feather — minimal */
+      linear-gradient(to bottom, rgba(4,4,5,0.45) 0%, transparent 14%, transparent 78%, rgba(4,4,5,0.95) 100%),
+      /* Crisp red rim-light hugging the car */
+      radial-gradient(ellipse 28% 18% at 76% 62%, rgba(255,40,55,0.55) 0%, transparent 70%),
+      radial-gradient(ellipse 22% 14% at 30% 60%, rgba(60,80,200,0.18) 0%, transparent 70%),
+      /* Subtle warm key-light on body */
+      radial-gradient(ellipse 50% 45% at 58% 50%, rgba(255,80,40,0.10) 0%, transparent 70%),
+      /* The actual car photo */
+      url('https://ik.imagekit.io/i36lgbwf2/hero-car.jpeg');
+    background-size: cover, cover, cover, cover, cover, cover;
+    background-position: center, center, center, center, center, center 38%;
+    background-repeat: no-repeat;
+    /* Premium image processing — boost contrast, deepen blacks, slight saturation, sharpen via contrast */
+    filter: contrast(1.18) saturate(1.12) brightness(0.96);
+    animation: kenBurns 22s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  /* Sharpening pseudo — high-frequency detail layer using the image again with overlay blend */
+  .hero-bg::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: url('https://ik.imagekit.io/i36lgbwf2/hero-car.jpeg') center 38% / cover no-repeat;
+    mix-blend-mode: overlay;
+    opacity: 0.35;
+    filter: contrast(1.6) brightness(1.1);
+    pointer-events: none;
+  }
+  /* Crisp red rim-light highlight on car right edge */
+  .hero-bg::after {
+    content: "";
+    position: absolute;
+    right: 0; top: 30%;
+    width: 35%; height: 50%;
+    background: radial-gradient(ellipse 60% 70% at 70% 50%, rgba(255,30,50,0.45) 0%, transparent 70%);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    filter: blur(2px);
+  }
+  @keyframes kenBurns {
+    0%   { transform: scale(1.0)  translate(0, 0); }
+    100% { transform: scale(1.06) translate(-1.2%, -0.8%); }
+  }
+  /* Hero scanline overlay — adds cinematic texture */
+  .hero::after {
+    content: "";
+    position: absolute; inset: 0; z-index: 1;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(
+        180deg,
+        rgba(255,255,255,0.0) 0px,
+        rgba(255,255,255,0.0) 2px,
+        rgba(255,255,255,0.012) 3px,
+        rgba(255,255,255,0.0) 4px
+      );
+    mix-blend-mode: overlay;
+  }
+
+  /* Animated grid lines */
+  .hero-grid {
+    position: absolute; inset: 0; z-index: 0; opacity: 0.04;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+  }
+
+  /* SVG car hidden — real photo used in hero-bg instead */
+  .hero-car {
+    display: none;
+  }
+  .car-glow {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: 500px; height: 60px;
+    background: radial-gradient(ellipse, rgba(232,0,29,0.4) 0%, transparent 70%);
+    filter: blur(20px);
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.6; transform: translateX(-50%) scaleX(1); }
+    50% { opacity: 1; transform: translateX(-50%) scaleX(1.1); }
+  }
+
+  /* Car SVG-based shape */
+  .car-svg-wrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .hero-content {
+    position: relative; z-index: 2;
+    padding: 80px 60px 80px 100px;
+    max-width: 740px;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-display); font-size: 10px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--red);
+    margin-bottom: 28px;
+  }
+  .hero-badge::before { content: ''; display: block; width: 24px; height: 1px; background: var(--red); }
+  .hero-badge::after { content: ''; display: block; width: 24px; height: 1px; background: var(--red); }
+
+  .hero-title {
+    font-family: var(--font-display); font-weight: 900; font-style: italic;
+    letter-spacing: -0.04em;
+    font-size: clamp(60px, 8vw, 104px);
+    line-height: 0.92; text-transform: uppercase;
+    letter-spacing: -1px;
+    margin-bottom: 28px;
+  }
+  .hero-title .highlight {
+    color: var(--red);
+    position: relative; display: inline-block;
+    padding: 0 8px;
+  }
+  .hero-title .highlight::before {
+    content: '';
+    position: absolute; inset: 0;
+    border: 2px solid var(--red);
+    border-radius: 2px;
+  }
+
+  .hero-sub {
+    font-size: 14px; line-height: 1.7; color: var(--grey-light);
+    max-width: 420px; margin-bottom: 40px; font-weight: 400;
+  }
+
+  .hero-stats {
+    display: flex; gap: 48px; margin-bottom: 44px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .stat-num {
+    font-family: var(--font-display); font-size: 42px; font-weight: 900;
+    line-height: 1; color: var(--white); margin-bottom: 4px;
+    display: flex; align-items: flex-start;
+  }
+  .stat-num sup {
+    font-size: 18px; margin-top: 4px; color: var(--red);
+  }
+  .stat-label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--grey); font-weight: 600;
+  }
+
+  .hero-actions {
+    display: flex; gap: 14px; align-items: center; margin-bottom: 40px;
+  }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--red) 0%, var(--red-deep) 100%);
+    color: white; border: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 6px 20px rgba(232,0,29,0.25);
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 14px 28px; border-radius: 3px; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 24px var(--red-glow);
+  }
+  .btn-primary:hover { background: #ff0020; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(232,0,29,0.45); }
+
+  .btn-secondary {
+    background: transparent; color: white;
+    border: 1.5px solid #2a2a2a;
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 14px 28px; border-radius: 3px; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--grey-dark); background: #141414; transform: translateY(-2px); }
+
+  .scroll-hint {
+    /* Centred at the bottom of the hero, not inside the text column */
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    cursor: default;
+    animation: scroll-bob 2s ease-in-out infinite;
+  }
+  @keyframes scroll-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%       { transform: translateX(-50%) translateY(5px); }
+  }
+  .scroll-hint::after {
+    content: '';
+    display: block; width: 1px; height: 36px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.45), transparent);
+  }
+
+  /* ─── FIND YOUR VEHICLE CARD ─── */
+  /* ═══════════════════════════════════════════════
+     VRM SEARCH COMPONENT — Premium UK plate style
+     ═══════════════════════════════════════════════ */
+  .hero-finder {
+    position: absolute;
+    right: 44px;
+    /* always visible: 20px below nav, 20px from bottom */
+    top: 88px;
+    bottom: 20px;
+    width: 420px;
+    z-index: 10;
+    background: #111111;
+    border: 1px solid #2a2a2a;
+    border-top: 2px solid var(--red);
+    border-radius: 8px;
+    padding: 28px 28px 24px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 32px 80px rgba(0,0,0,0.9),
+      0 0 60px rgba(232,0,29,0.07);
+    /* scroll internally if content is taller than card */
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    /* hide scrollbar but keep scroll */
+    scrollbar-width: none;
+  }
+  .hero-finder::-webkit-scrollbar { display: none; }
+
+  /* ── Title ── */
+  .finder-title {
+    font-family: var(--font-display);
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 4px;
+    color: #999; margin-bottom: 6px;
+  }
+  .finder-headline {
+    font-family: var(--font-display);
+    font-size: 26px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--white); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+    line-height: 1;
+  }
+  .finder-headline .slash { color: var(--red); }
+  .finder-sub {
+    font-size: 13px; color: #777;
+    line-height: 1.6; margin-bottom: 24px;
+    font-family: var(--font-body);
+  }
+
+  /* ── UK Number Plate ── */
+  .uk-plate {
+    display: flex;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    /* Authentic plate border */
+    border: 2px solid #FFCC00;
+    box-shadow:
+      0 0 0 1px rgba(255,204,0,0.2),
+      inset 0 1px 3px rgba(0,0,0,0.15);
+    transition: box-shadow 0.2s;
+  }
+  .uk-plate:focus-within {
+    box-shadow:
+      0 0 0 3px rgba(255,204,0,0.35),
+      0 0 20px rgba(255,204,0,0.15),
+      inset 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  /* Blue GB strip */
+  .plate-gb {
+    background: #003399;
+    width: 52px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px 6px; gap: 3px;
+  }
+  /* EU stars ring */
+  .plate-stars {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 2px; width: 22px;
+  }
+  .plate-stars span {
+    display: block; width: 4px; height: 4px;
+    background: #FFCC00; border-radius: 50%;
+    margin: 0 auto;
+  }
+  /* Hide corner stars to approximate EU circle */
+  .plate-stars span:nth-child(1),
+  .plate-stars span:nth-child(3),
+  .plate-stars span:nth-child(7),
+  .plate-stars span:nth-child(9) { opacity: 0.3; }
+
+  .plate-gb-text {
+    font-family: var(--font-display);
+    font-size: 13px; font-weight: 900;
+    letter-spacing: 1px; color: #FFFFFF;
+    line-height: 1;
+  }
+  .plate-gb-small {
+    font-size: 8px; font-weight: 600;
+    letter-spacing: 1.5px; color: rgba(255,255,255,0.55);
+    text-transform: uppercase; font-family: var(--font-body);
+  }
+
+  /* Yellow plate area */
+  .plate-input-wrap {
+    flex: 1;
+    background: #FFCC00;
+    display: flex; align-items: center;
+    padding: 0 16px;
+  }
+  .reg-input {
+    width: 100%; background: transparent; border: none; outline: none;
+    font-family: 'Barlow Condensed', monospace;
+    font-size: 32px; font-weight: 900;
+    letter-spacing: 7px; text-transform: uppercase;
+    color: #1a1a1a;
+    padding: 14px 0;
+    caret-color: #1a1a1a;
+    text-align: left;
+  }
+  .reg-input::placeholder {
+    color: rgba(26,26,26,0.3);
+    letter-spacing: 7px;
+  }
+
+  /* ── Search Button ── */
+  .btn-search {
+    width: 100%; background: var(--red); color: white; border: none;
+    font-family: var(--font-display); font-size: 14px; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase;
+    padding: 16px; border-radius: 4px; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 28px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 4px 20px rgba(232,0,29,0.3);
+    position: relative; overflow: hidden;
+  }
+  .btn-search::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .btn-search:hover {
+    background: #ff001a;
+    box-shadow: 0 6px 32px rgba(232,0,29,0.55), 0 0 0 1px rgba(232,0,29,0.3);
+    transform: translateY(-1px) scale(1.01);
+  }
+  .btn-search:active { transform: translateY(0) scale(0.99); }
+
+  /* ── Trust Signals ── */
+  .finder-trust {
+    list-style: none;
+    border-top: 1px solid #1e1e1e;
+    padding-top: 22px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .finder-trust li {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 12px; color: #777;
+    font-family: var(--font-body); line-height: 1.4;
+  }
+  .trust-icon {
+    width: 28px; height: 28px; flex-shrink: 0;
+    border: 1px solid #222; border-radius: 4px;
+    background: #161616;
+    display: flex; align-items: center; justify-content: center;
+    color: #555;
+  }
+  .trust-icon svg { width: 13px; height: 13px; }
+  .trust-label { font-weight: 600; color: #aaa; font-size: 12px; }
+  .trust-desc { color: #555; font-size: 11px; }
+
+  /* ─── SECTION DEFAULTS ─── */
+  section { padding: 100px 60px; max-width: 1400px; margin: 0 auto; }
+
+  .section-wrap { background: var(--black); }
+  .section-wrap.alt { background: #090909; }
+
+  .section-label {
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--red);
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::before { content: '//'; }
+
+  .section-title {
+    font-family: var(--font-display); font-weight: 900; font-size: clamp(40px, 5vw, 68px);
+    line-height: 0.95; text-transform: uppercase; letter-spacing: -0.025em;
+  }
+  .section-title .slash {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--red);
+    font-style: italic;
+    text-shadow: 0 0 24px rgba(232,0,29,0.35);
+    margin: 0 4px;
+  }
+  .section-label {
+    font-family: var(--font-mono) !important;
+    letter-spacing: 0.18em !important;
+  }
+
+  /* ─── SERVICES ─── */
+  .services-wrap { background: var(--black); border-top: 1px solid #111; border-bottom: 1px solid #111; }
+  .services-header {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: start; margin-bottom: 52px;
+  }
+  .services-desc { padding-top: 20px; }
+  .services-desc p { font-size: 14px; color: var(--grey-light); line-height: 1.8; }
+  .services-desc p + p { margin-top: 10px; color: var(--grey); }
+
+  .services-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 1px; background: #111;
+    border: 1px solid #111; border-radius: 4px; overflow: hidden;
+  }
+  .service-card {
+    background: var(--card);
+    padding: 22px 18px;
+    transition: background 0.3s, transform 0.35s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.3s, border-color 0.3s;
+    cursor: pointer; position: relative;
+    display: flex; flex-direction: column;
+    border: 1px solid #1a1a1a;
+    overflow: hidden;
+  }
+  .service-card::before, .service-card .corner-tr, .service-card .corner-bl {
+    content: "";
+    position: absolute;
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--red);
+    opacity: 0;
+    transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+    pointer-events: none;
+  }
+  .service-card::before {
+    top: 8px; left: 8px;
+    border-right: none; border-bottom: none;
+    transform: translate(6px, 6px);
+  }
+  .service-card .corner-tr {
+    top: 8px; right: 8px;
+    border-left: none; border-bottom: none;
+    transform: translate(-6px, 6px);
+  }
+  .service-card .corner-bl {
+    bottom: 8px; left: 8px;
+    border-right: none; border-top: none;
+    transform: translate(6px, -6px);
+  }
+  .service-card .corner-br {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--red);
+    border-left: none; border-top: none;
+    opacity: 0;
+    transform: translate(-6px, -6px);
+    transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+    pointer-events: none;
+  }
+  .service-card:hover::before,
+  .service-card:hover .corner-tr,
+  .service-card:hover .corner-bl,
+  .service-card:hover .corner-br {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  .service-card:hover {
+    background: linear-gradient(135deg, var(--red) 0%, var(--red-deep) 100%);
+    transform: translateY(-4px);
+    box-shadow: 0 18px 50px rgba(232,0,29,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
+    border-color: var(--red-bright);
+    z-index: 2;
+  }
+  .service-card:hover .service-name { color: #fff; }
+  .service-card:hover .service-desc { color: rgba(255,255,255,0.8); }
+  .service-card:hover .service-tag  { color: rgba(255,255,255,0.7); }
+  .service-card:hover .service-tag::before { color: #fff; }
+  .service-card:hover .service-icon { color: rgba(255,255,255,0.9); }
+  .service-card::after { display: none; }
+  .service-card.featured {
+    background: var(--red);
+  }
+  .service-card.featured:hover { background: #ff0020; }
+  .service-card.featured::after { display: none; }
+
+  .service-icon {
+    width: 28px; height: 28px; margin-bottom: 16px;
+    color: var(--grey); flex-shrink: 0;
+  }
+  .service-card.featured .service-icon { color: rgba(255,255,255,0.8); }
+
+  .service-name {
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--white);
+    margin-bottom: 8px; line-height: 1.2;
+  }
+  .service-desc {
+    font-size: 12px; color: var(--grey); line-height: 1.6;
+    flex: 1;
+  }
+  .service-card.featured .service-desc { color: rgba(255,255,255,0.75); }
+
+  .service-tag {
+    margin-top: 16px; font-family: var(--font-display); font-size: 10px;
+    font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--grey-dark); display: flex; align-items: center; gap: 6px;
+  }
+  .service-tag::before { content: '→'; color: var(--red); }
+  .service-card.featured .service-tag { color: rgba(255,255,255,0.6); }
+  .service-card.featured .service-tag::before { color: white; }
+
+  /* ─── MARQUEE ─── */
+  .marquee-section {
+    background: #0a0a0a; border-top: 1px solid #111; border-bottom: 1px solid #111;
+    padding: 0; overflow: hidden;
+  }
+  .marquee-track {
+    display: flex; align-items: center;
+    animation: marquee 25s linear infinite;
+    padding: 26px 0;
+  }
+  .marquee-track:hover { animation-play-state: paused; }
+  .marquee-item {
+    display: flex; align-items: center; gap: 40px;
+    white-space: nowrap; flex-shrink: 0;
+    padding-right: 40px;
+  }
+  .marquee-brand {
+    font-family: var(--font-display); font-size: 22px; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--white);
+    opacity: 0.9;
+    transition: opacity 0.2s, color 0.2s;
+  }
+  .marquee-brand:hover {
+    color: var(--red);
+    opacity: 1;
+  }
+  .marquee-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); flex-shrink: 0;
+  }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ─── PROCESS ─── */
+  .process-header {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: start; margin-bottom: 60px;
+  }
+  .process-desc { padding-top: 20px; }
+  .process-desc p { font-size: 14px; color: var(--grey-light); line-height: 1.8; }
+
+  .process-steps {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: #111;
+    border: 1px solid #111; border-radius: 4px; overflow: hidden;
+  }
+  .process-step {
+    background: var(--card); padding: 28px 22px;
+    position: relative; transition: background 0.25s, color 0.25s, transform 0.3s;
+  }
+  .process-step:hover {
+    background: var(--red);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(232,0,29,0.2);
+    z-index: 2;
+  }
+  .process-step:hover .step-num  { color: rgba(255,255,255,0.9); }
+  .process-step:hover .step-name { color: #fff; }
+  .process-step:hover .step-desc { color: rgba(255,255,255,0.75); }
+
+  .step-arrow {
+    position: absolute; right: -13px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; background: var(--black);
+    border: 1px solid #1e1e1e; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--red); z-index: 2;
+  }
+  .process-step:last-child .step-arrow { display: none; }
+
+  .step-num {
+    font-family: var(--font-display); font-size: 36px; font-weight: 900;
+    color: var(--red); line-height: 1; margin-bottom: 16px; opacity: 0.9;
+  }
+  .step-name {
+    font-family: var(--font-display); font-size: 14px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--white);
+    margin-bottom: 10px; line-height: 1.2;
+  }
+  .step-desc { font-size: 12px; color: var(--grey); line-height: 1.7; }
+
+  /* ─── FLEET ─── */
+  .fleet-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: start;
+  }
+  .fleet-items { margin-top: 36px; display: flex; flex-direction: column; gap: 0; }
+  .fleet-item {
+    display: flex; gap: 20px; align-items: flex-start;
+    padding: 22px 0; border-bottom: 1px solid #161616;
+    transition: background 0.3s, padding-left 0.3s cubic-bezier(0.2,0.8,0.2,1), border-color 0.3s;
+    position: relative;
+  }
+  .fleet-item::before {
+    content: "→";
+    position: absolute;
+    left: -8px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--red);
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 22px;
+    opacity: 0;
+    transition: opacity 0.25s ease, left 0.3s cubic-bezier(0.2,0.8,0.2,1);
+    pointer-events: none;
+  }
+  .fleet-item:hover::before {
+    opacity: 1;
+    left: -2px;
+  }
+  .fleet-item:hover {
+    background: linear-gradient(90deg, rgba(232,0,29,0.06) 0%, rgba(232,0,29,0.0) 80%);
+    padding-left: 22px;
+    border-color: rgba(232,0,29,0.25);
+  }
+  }
+  .fleet-item:last-child { border-bottom: none; }
+  .fleet-num {
+    font-family: var(--font-display); font-size: 12px; font-weight: 700;
+    color: var(--red); letter-spacing: 1px; min-width: 24px; margin-top: 2px;
+  }
+  .fleet-item-content {}
+  .fleet-item-title {
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--white);
+    margin-bottom: 5px;
+  }
+  .fleet-item-desc { font-size: 12px; color: var(--grey); line-height: 1.6; }
+
+  .fleet-card {
+    background: var(--card); border: 1px solid #1e1e1e; border-radius: 6px;
+    padding: 36px 32px;
+    border-left: 3px solid var(--red);
+    position: relative; overflow: hidden;
+    align-self: start; margin-top: 20px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .fleet-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(232,0,29,0.08);
+  }
+  .fleet-card::before {
+    content: '';
+    position: absolute; top: -40px; left: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(232,0,29,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .fleet-price {
+    font-family: var(--font-display); font-size: 100px; font-weight: 900;
+    color: var(--red); line-height: 0.9; margin-bottom: 4px;
+    text-shadow: 0 0 60px rgba(232,0,29,0.3);
+  }
+  .fleet-price-label {
+    font-family: var(--font-display); font-size: 16px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--white);
+    margin-bottom: 14px;
+  }
+  .fleet-price-desc { font-size: 13px; color: var(--grey-light); line-height: 1.7; margin-bottom: 24px; }
+  .fleet-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fleet-tag {
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--grey);
+    border: 1px solid #2a2a2a; border-radius: 3px;
+    padding: 6px 12px; background: #0e0e0e;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    cursor: default;
+  }
+  .fleet-tag:hover { border-color: var(--grey-dark); color: var(--white); background: #161616; }
+
+  /* ─── ESTIMATOR / GAINS CALCULATOR ─── */
+  .estimator-section {
+    background:
+      linear-gradient(180deg, #1a1a1d 0%, #161618 50%, #131316 100%);
+    padding: 110px 60px 120px;
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid #242428;
+    border-bottom: 1px solid #242428;
+  }
+  .estimator-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 20% 0%, rgba(232,0,29,0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 60% at 100% 100%, rgba(232,0,29,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  /* Diagonal speed-line accent */
+  .estimator-section::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 100%;
+    background-image:
+      repeating-linear-gradient(
+        -75deg,
+        transparent 0,
+        transparent 80px,
+        rgba(255,255,255,0.018) 80px,
+        rgba(255,255,255,0.018) 81px
+      );
+    pointer-events: none;
+  }
+  .estimator-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Unique headline block ─── */
+  .est-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 36px;
+    margin-bottom: 48px;
+    padding-bottom: 36px;
+    border-bottom: 1px solid #2a2a2e;
+    position: relative;
+  }
+  .est-header::before {
+    content: "";
+    position: absolute;
+    bottom: -1px; left: 0;
+    width: 80px; height: 2px;
+    background: var(--red);
+    box-shadow: 0 0 16px rgba(232,0,29,0.6);
+  }
+  .est-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .est-marker-num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    font-size: 90px;
+    line-height: 0.85;
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--red);
+    letter-spacing: -0.04em;
+    text-shadow: 0 0 24px rgba(232,0,29,0.25);
+  }
+  .est-marker-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--red-bright);
+    padding: 6px 12px;
+    background: rgba(232,0,29,0.10);
+    border: 1px solid rgba(232,0,29,0.4);
+    border-radius: 100px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .est-marker-tag svg { width: 11px; height: 11px; }
+  .est-headline-block { display: flex; flex-direction: column; gap: 14px; }
+  .est-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .est-eyebrow::before {
+    content: "";
+    width: 24px; height: 1px;
+    background: var(--red);
+  }
+  .est-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    font-size: clamp(38px, 4.8vw, 64px);
+    line-height: 0.92;
+    text-transform: uppercase;
+    letter-spacing: -0.035em;
+    color: rgba(255,255,255,0.96);
+  }
+  .est-title .accent {
+    color: var(--red);
+    position: relative;
+    text-shadow: 0 0 30px rgba(232,0,29,0.45);
+  }
+  .est-title .accent::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: 4px;
+    width: 100%; height: 6px;
+    background: var(--red);
+    opacity: 0.18;
+    z-index: -1;
+  }
+  .est-sub {
+    color: rgba(255,255,255,0.65);
+    font-size: 15px;
+    max-width: 580px;
+    line-height: 1.55;
+  }
+  .est-sub strong { color: var(--white); font-weight: 600; }
+
+  /* Form card — lighter */
+  .est-form {
+    background: linear-gradient(180deg, #1f1f23 0%, #1a1a1e 100%);
+    border: 1px solid #2d2d31;
+    border-radius: 8px;
+    padding: 36px;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .est-form::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 24px; right: 24px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    opacity: 0.7;
+  }
+  .est-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 28px;
+    margin-bottom: 28px;
+  }
+  .est-field { display: flex; flex-direction: column; gap: 8px; }
+  .est-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+  }
+  .est-select-wrap { position: relative; }
+  .est-select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: #15151a;
+    border: 1px solid #2e2e33;
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 14px 44px 14px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  .est-select:hover:not(:disabled) { border-color: #444; background: #1a1a20; }
+  .est-select:focus {
+    outline: none;
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(232,0,29,0.18);
+  }
+  .est-select:disabled { opacity: 0.4; cursor: not-allowed; }
+  .est-select option { background: #15151a; color: var(--white); }
+  .est-select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 16px; top: 50%;
+    width: 8px; height: 8px;
+    border-right: 2px solid var(--red);
+    border-bottom: 2px solid var(--red);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+  .est-submit {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(180deg, var(--red) 0%, var(--red-deep) 100%);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 8px 28px rgba(232,0,29,0.32);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .est-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 36px rgba(232,0,29,0.5);
+  }
+  .est-submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .est-submit svg { width: 16px; height: 16px; }
+
+  /* Result panel — lighter */
+  .est-result {
+    margin-top: 22px;
+    background: linear-gradient(180deg, #1f1f23 0%, #1a1a1e 100%);
+    border: 1px solid #2d2d31;
+    border-radius: 8px;
+    padding: 32px 36px 36px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2,0.8,0.2,1);
+    pointer-events: none;
+  }
+  .est-result.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .est-result::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 24px; right: 24px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    opacity: 0.7;
+  }
+  .est-vehicle {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(20px, 2.2vw, 26px);
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+    color: var(--white);
+  }
+  .est-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .est-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #15151a;
+    border: 1px solid #2e2e33;
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+  }
+  .est-chip.ecu { color: var(--red-bright); border-color: rgba(232,0,29,0.4); background: rgba(232,0,29,0.10); }
+  .est-chip svg { width: 12px; height: 12px; }
+  .est-perf-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 14px;
+  }
+  .est-stages {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .est-stage {
+    background: #15151a;
+    border: 1px solid #2a2a2e;
+    border-radius: 6px;
+    padding: 22px 24px;
+    position: relative;
+  }
+  .est-stage.s1 {
+    background: linear-gradient(135deg, rgba(232,0,29,0.14) 0%, rgba(232,0,29,0.0) 65%), #1a0a0d;
+    border-color: rgba(232,0,29,0.5);
+    box-shadow: 0 0 30px rgba(232,0,29,0.12);
+  }
+  .est-stage-name {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 14px;
+  }
+  .est-stage.s1 .est-stage-name { color: var(--red-bright); }
+  .est-numbers { display: flex; gap: 28px; align-items: baseline; }
+  .est-num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 42px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--white);
+  }
+  .est-unit {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 4px;
+  }
+  .est-gain {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: #4ade80;
+    margin-top: 6px;
+    display: block;
+  }
+  .est-bars { display: flex; flex-direction: column; gap: 14px; margin-bottom: 26px; }
+  .est-bar-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 60px;
+    align-items: center;
+    gap: 14px;
+  }
+  .est-bar-label {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+  }
+  .est-bar-track {
+    position: relative;
+    height: 8px;
+    background: #2a2a2e;
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .est-bar-fill {
+    position: absolute;
+    inset: 0 100% 0 0;
+    background: linear-gradient(90deg, var(--red-deep), var(--red), var(--red-bright));
+    border-radius: 100px;
+    box-shadow: 0 0 12px rgba(232,0,29,0.5);
+    transition: inset 1.2s cubic-bezier(0.2,0.8,0.2,1);
+  }
+  .est-bar-pct {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--red-bright);
+    text-align: right;
+  }
+  /* Single primary CTA */
+  .est-actions {
+    margin-top: 8px;
+  }
+  .est-btn-book {
+    width: 100%;
+    padding: 18px 22px;
+    background: linear-gradient(180deg, var(--red) 0%, var(--red-deep) 100%);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 8px 28px rgba(232,0,29,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .est-btn-book:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 14px 40px rgba(232,0,29,0.5);
+  }
+  .est-btn-book svg { width: 15px; height: 15px; }
+
+  @media (max-width: 720px) {
+    .est-numbers { gap: 18px; }
+  }
+
+  /* ─── CTA BANNER ─── */
+  .cta-banner {
+    background: var(--red); max-width: none !important;
+    padding: 70px 60px !important;
+    position: relative; overflow: hidden;
+  }
+  .cta-banner::before {
+    content: '';
+    position: absolute; right: -100px; top: -100px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(0,0,0,0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-banner::after {
+    content: '';
+    position: absolute; left: 0; bottom: 0;
+    width: 100%; height: 1px;
+    background: rgba(0,0,0,0.15);
+  }
+  .cta-inner {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 40px; position: relative; z-index: 1;
+  }
+  .cta-label {
+    font-family: var(--font-display); font-size: 10px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.6);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cta-label::before { content: '//'; }
+  .cta-headline {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: clamp(28px, 3.5vw, 48px);
+    text-transform: uppercase; line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .btn-whatsapp {
+    background: var(--black); color: white; border: none;
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 16px 30px; border-radius: 4px; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+    white-space: nowrap; transition: all 0.2s;
+  }
+  .btn-whatsapp:hover { background: #0f0f0f; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+
+  /* ─── CONTACT ─── */
+  .contact-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 60px; align-items: start;
+  }
+  .contact-info { grid-column: 1; }
+  .contact-details { grid-column: 2; }
+  .contact-hours { grid-column: 3; }
+
+  .contact-detail-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: var(--card); border: 1px solid #1a1a1a; border-radius: 4px;
+    margin-bottom: 10px; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  .contact-detail-item:hover {
+    border-color: var(--red);
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(232,0,29,0.1);
+  }
+  .contact-icon {
+    width: 36px; height: 36px; background: rgba(232,0,29,0.15); border-radius: 4px;
+    border: 1px solid rgba(232,0,29,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+    color: var(--red);
+  }
+  .contact-item-label { font-size: 10px; letter-spacing: 2px; color: var(--grey); text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
+  .contact-item-value { font-size: 14px; font-weight: 600; color: var(--white); }
+
+  .contact-sub { font-size: 13px; color: var(--grey); line-height: 1.8; margin-top: 16px; }
+
+  .hours-card {
+    background: var(--card); border: 1px solid #1a1a1a; border-radius: 6px;
+    padding: 22px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .hours-card:hover {
+    border-color: #2a2a2a;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .hours-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+  }
+  .hours-title {
+    font-family: var(--font-display); font-size: 16px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .open-badge {
+    background: rgba(0,200,80,0.12); border: 1px solid rgba(0,200,80,0.3);
+    color: #00c850; font-family: var(--font-display); font-size: 9px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; padding: 4px 10px; border-radius: 20px;
+  }
+  .hours-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid #161616; font-size: 12px;
+  }
+  .hours-row:last-child { border-bottom: none; }
+  .hours-day { color: var(--grey-light); font-weight: 500; }
+  .hours-time { color: var(--white); font-weight: 600; font-size: 12px; }
+  .hours-appt { color: var(--grey); font-style: italic; font-size: 11px; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: #060606; border-top: 1px solid #111;
+    padding: 40px 60px;
+  }
+  .footer-top {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1400px; margin: 0 auto 28px;
+    padding-bottom: 28px; border-bottom: 1px solid #141414;
+  }
+  .footer-nav { display: flex; gap: 0; list-style: none; }
+  .footer-nav li a {
+    font-family: var(--font-display); font-size: 10px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--grey);
+    text-decoration: none; padding: 6px 14px;
+    display: flex; align-items: center; gap: 6px;
+    transition: color 0.2s;
+  }
+  .footer-nav li a::before { content: '//'; color: #333; font-size: 9px; }
+  .footer-nav li a:hover { color: var(--white); }
+
+  .footer-social { display: flex; gap: 10px; }
+  .social-btn {
+    width: 34px; height: 34px; background: #141414; border: 1px solid #1e1e1e;
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; text-decoration: none; color: var(--grey);
+    transition: all 0.2s; cursor: pointer;
+  }
+  .social-btn:hover { border-color: #333; color: white; background: #1a1a1a; }
+
+  .footer-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .footer-copy { font-size: 11px; color: #444; }
+  .footer-legal { display: flex; gap: 24px; }
+  .footer-legal a { font-size: 11px; color: #444; text-decoration: none; transition: color 0.2s; }
+  .footer-legal a:hover { color: var(--grey); }
+  .footer-tagline { font-size: 11px; color: #333; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ─── WHATSAPP FAB ─── */
+  .whatsapp-fab {
+    position: fixed; bottom: 28px; right: 28px; z-index: 999;
+    width: 52px; height: 52px; background: #25D366; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(37,211,102,0.4); cursor: pointer;
+    font-size: 24px; text-decoration: none;
+    transition: all 0.2s; animation: fab-bounce 3s ease-in-out infinite;
+  }
+  .whatsapp-fab:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 8px 28px rgba(37,211,102,0.55); }
+  @keyframes fab-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  /* ─── ANIMATIONS ─── */
+  .fade-up {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+  .stagger-1 { transition-delay: 0.1s; }
+  .stagger-2 { transition-delay: 0.2s; }
+  .stagger-3 { transition-delay: 0.3s; }
+  .stagger-4 { transition-delay: 0.4s; }
+
+  /* ─── DIVIDER ─── */
+  .section-divider {
+    max-width: none !important;
+    padding: 0 !important;
+    border-top: 1px solid #111;
+    margin: 0;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 1280px) {
+    .hero-content { padding: 80px 48px 80px 60px; }
+    .hero-finder { right: 32px; width: 360px; }
+    .services-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 1100px) {
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-finder {
+      position: relative;
+      right: auto; top: auto; transform: none;
+      width: auto; max-width: 520px;
+      margin: 0 40px 60px;
+    }
+    .services-grid { grid-template-columns: repeat(3, 1fr); }
+    .contact-grid { grid-template-columns: 1fr 1fr; }
+    .contact-hours { grid-column: 1 / -1; }
+    .hero-content { padding: 80px 60px 60px 60px; }
+    .vr-cards { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    section { padding: 80px 32px; }
+    .estimator-section { padding: 90px 32px 100px; }
+    .services-grid { grid-template-columns: repeat(2, 1fr); }
+    .process-steps { grid-template-columns: 1fr 1fr; }
+    .services-header { grid-template-columns: 1fr; gap: 28px; }
+    .process-header { grid-template-columns: 1fr; gap: 28px; }
+    .fleet-grid { grid-template-columns: 1fr; gap: 40px; }
+    .vr-grid { grid-template-columns: 1fr 1fr; }
+    .vr-cards { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    .social-sidebar { display: none; }
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    section { padding: 64px 20px; }
+    .hero-content { padding: 60px 24px 40px; }
+    .hero-finder { margin: 0 24px 60px; max-width: 100%; }
+    .hero-stats { gap: 24px; flex-wrap: wrap; padding-bottom: 32px; margin-bottom: 32px; }
+    .hero-actions { flex-wrap: wrap; gap: 10px; }
+    .hero-actions .btn-primary, .hero-actions .btn-secondary { flex: 1 1 auto; justify-content: center; }
+    .services-grid { grid-template-columns: 1fr 1fr; }
+    .process-steps { grid-template-columns: 1fr 1fr; }
+    .vr-cards { grid-template-columns: 1fr; }
+    .vr-grid { grid-template-columns: 1fr 1fr; }
+    .contact-grid { grid-template-columns: 1fr; gap: 36px; }
+    .cta-banner { padding: 50px 28px !important; }
+    .cta-inner { flex-direction: column; align-items: flex-start; gap: 28px; }
+    .footer-top { flex-direction: column; gap: 20px; align-items: flex-start; }
+    .footer-bottom { flex-direction: column; gap: 12px; align-items: flex-start; }
+    /* Estimator mobile */
+    .estimator-section { padding: 64px 20px 72px; }
+    .est-form { padding: 22px; }
+    .est-result { padding: 24px 22px 26px; }
+    .est-header { grid-template-columns: 1fr; gap: 18px; padding-bottom: 28px; margin-bottom: 32px; }
+    .est-marker { flex-direction: row; align-items: center; gap: 16px; }
+    .est-marker-num { font-size: 56px; }
+    .est-grid { grid-template-columns: 1fr; gap: 16px; }
+    .est-stages { grid-template-columns: 1fr; }
+    .est-bar-row { grid-template-columns: 90px 1fr 48px; gap: 10px; }
+    .est-numbers { gap: 22px; }
+    .est-num { font-size: 38px; }
+    .est-vehicle { font-size: 18px; }
+    .est-btn-book { font-size: 12px; padding: 16px; }
+  }
+  @media (max-width: 480px) {
+    section { padding: 56px 16px; }
+    .estimator-section { padding: 56px 16px 64px; }
+    .hero-content { padding: 50px 18px 32px; }
+    .hero-finder { margin: 0 16px 48px; }
+    .hero-title { font-size: clamp(44px, 12vw, 64px); }
+    .hero-stats {
+      gap: 16px 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; }
+    .services-grid { grid-template-columns: 1fr; }
+    .process-steps { grid-template-columns: 1fr; }
+    .vr-grid { grid-template-columns: 1fr; }
+    .section-title { font-size: clamp(34px, 9vw, 48px); }
+    .est-title { font-size: clamp(30px, 8vw, 44px); }
+    .est-marker-num { font-size: 48px; }
+    .est-form { padding: 18px; }
+    .est-result { padding: 22px 18px 22px; }
+    .est-num { font-size: 34px; }
+    .est-bar-row { grid-template-columns: 80px 1fr 44px; }
+    .est-vehicle { font-size: 16px; }
+    .est-meta { gap: 6px; }
+    .est-chip { font-size: 10px; padding: 5px 10px; }
+  }
+
+  /* Counter animation */
+  @keyframes count-up { from { opacity: 0; } to { opacity: 1; } }
+  .counter { animation: count-up 0.5s ease forwards; }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* ══════════════════════════════════════════════════
+     VRM RESULT PANEL — Rich vehicle data (ref style)
+     ══════════════════════════════════════════════════ */
+  /* ════════════════════════════════════════════════════
+     VRM RESULT — Original design, own visual language
+     ════════════════════════════════════════════════════ */
+
+  .vrm-result { display: none; }
+  .vrm-result.visible {
+    display: flex; flex-direction: column; gap: 8px;
+    animation: vrmIn 0.38s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes vrmIn {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── Status bar ── */
+  .vr-status {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; border-radius: 4px;
+    background: #060a07; border: 1px solid #0f2116;
+  }
+  .vr-status-left { display: flex; align-items: center; gap: 8px; }
+  .vr-status-check {
+    width: 18px; height: 18px; border-radius: 3px;
+    background: rgba(0,190,80,0.12); border: 1px solid rgba(0,190,80,0.25);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .vr-status-check svg { color: #00be50; }
+  .vr-status-label {
+    font-family: var(--font-display); font-size: 10px; font-weight: 800;
+    letter-spacing: 2.5px; text-transform: uppercase; color: #00be50;
+  }
+  /* Mini UK plate in status bar */
+  .vr-status-plate {
+    display: flex; border-radius: 2px; overflow: hidden;
+    border: 1px solid rgba(255,204,0,0.3);
+  }
+  .vr-plate-gb {
+    background: #003399; padding: 2px 5px;
+    font-family: var(--font-display); font-size: 9px; font-weight: 900;
+    color: #fff; letter-spacing: 0.5px; display: flex; align-items: center;
+  }
+  .vr-plate-num {
+    background: #FFCC00; padding: 2px 9px;
+    font-family: var(--font-display); font-size: 12px; font-weight: 900;
+    letter-spacing: 3.5px; color: #111; text-transform: uppercase;
+  }
+
+  /* ── Vehicle nameplate ── */
+  .vr-nameplate {
+    background: #080808; border: 1px solid #141414;
+    border-left: 3px solid var(--red);
+    border-radius: 4px; padding: 12px 14px 10px;
+  }
+  .vr-name {
+    font-family: var(--font-display); font-size: 15px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.5px; color: #fff;
+    margin-bottom: 10px; line-height: 1;
+  }
+  /* 2-column data grid — coloured icon tiles */
+  .vr-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+  }
+  .vr-cell {
+    display: flex; align-items: center; gap: 8px;
+    background: #0d0d0d; border: 1px solid #141414; border-radius: 3px;
+    padding: 7px 8px;
+  }
+  .vr-icon {
+    width: 26px; height: 26px; border-radius: 3px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .vr-icon.i-fuel    { background: rgba(220,65,0,0.1);  border: 1px solid rgba(220,65,0,0.2);  color: #dc4100; }
+  .vr-icon.i-engine  { background: rgba(0,120,220,0.1); border: 1px solid rgba(0,120,220,0.2); color: #0078dc; }
+  .vr-icon.i-power   { background: rgba(200,145,0,0.1); border: 1px solid rgba(200,145,0,0.2); color: #c89100; }
+  .vr-icon.i-torque  { background: rgba(120,0,200,0.1); border: 1px solid rgba(120,0,200,0.2); color: #7800c8; }
+  .vr-cell-lbl {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: #282828;
+    margin-bottom: 2px; line-height: 1;
+  }
+  .vr-cell-val {
+    font-family: var(--font-display); font-size: 12px; font-weight: 800;
+    color: #ccc; line-height: 1; letter-spacing: 0.3px;
+  }
+
+  /* ── Variant + ECU row ── */
+  .vr-meta {
+    display: flex; gap: 7px; align-items: stretch;
+  }
+  .vr-meta-left { flex: 1; }
+  .vr-field-lbl {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; color: #1e1e1e;
+    margin-bottom: 4px;
+  }
+  .vr-sel {
+    width: 100%; background: #080808; border: 1px solid #141414;
+    border-radius: 3px; padding: 8px 24px 8px 10px;
+    font-family: var(--font-body); font-size: 11px; color: #999;
+    outline: none; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23282828' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .vr-sel:focus { border-color: #1e1e1e; outline: none; }
+  .vr-ecu {
+    display: flex; flex-direction: column; justify-content: center;
+    background: #080808; border: 1px solid #141414;
+    border-radius: 3px; padding: 7px 10px; flex-shrink: 0;
+    gap: 2px;
+  }
+  .vr-ecu-top {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .vr-ecu-top svg { color: #c89100; opacity: 0.6; }
+  .vr-ecu-lbl {
+    font-family: var(--font-display); font-size: 7px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: #222;
+  }
+  .vr-ecu-val {
+    font-family: var(--font-display); font-size: 13px; font-weight: 900;
+    color: #e8a800; letter-spacing: 0.5px; white-space: nowrap;
+    text-shadow: 0 0 12px rgba(232,168,0,0.22);
+  }
+
+  /* ── Power section header ── */
+  .vr-power-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .vr-power-hdr-lbl {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; color: #1e1e1e;
+  }
+  .vr-rec-pill {
+    font-family: var(--font-display); font-size: 8px; font-weight: 800;
+    letter-spacing: 1px; color: rgba(200,145,0,0.55);
+    background: rgba(200,145,0,0.06); border: 1px solid rgba(200,145,0,0.15);
+    padding: 2px 7px; border-radius: 20px;
+  }
+
+  /* ── 3 power cards ── */
+  .vr-cards {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
+  }
+  .vr-card {
+    border-radius: 4px; overflow: hidden; display: flex; flex-direction: column;
+  }
+  /* Top accent bar */
+  .vr-card-bar { height: 2px; flex-shrink: 0; background: #111; }
+  .vr-card.s1 .vr-card-bar {
+    background: linear-gradient(to right, #3a2200, #c89100, #3a2200);
+  }
+  .vr-card.s2 .vr-card-bar { background: #0c0c0c; }
+  /* Body */
+  .vr-card-body {
+    flex: 1; background: #080808; border: 1px solid #111; border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 12px 8px 10px; text-align: center;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .vr-card.s1 .vr-card-body {
+    background: #0c0800; border-color: rgba(200,145,0,0.2);
+  }
+  .vr-card.s2 .vr-card-body {
+    background: #050505; border-color: #0c0c0c; opacity: 0.4;
+  }
+  .vr-card-lbl {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; color: #1e1e1e;
+    margin-bottom: 8px;
+  }
+  .vr-card.s1 .vr-card-lbl { color: #c89100; }
+  .vr-num {
+    font-family: var(--font-display); font-size: 38px; font-weight: 900;
+    line-height: 1; letter-spacing: -2px; color: #fff;
+  }
+  .vr-unit {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: #1c1c1c;
+    margin-bottom: 5px;
+  }
+  .vr-gain-tag {
+    display: inline-flex; align-items: center;
+    background: rgba(200,145,0,0.1); border: 1px solid rgba(200,145,0,0.22);
+    border-radius: 20px; padding: 2px 7px; margin-bottom: 5px;
+    font-family: var(--font-display); font-size: 10px; font-weight: 900;
+    color: #c89100;
+  }
+  .vr-nm {
+    font-family: var(--font-display); font-size: 20px; font-weight: 800;
+    line-height: 1; color: #999; letter-spacing: -0.5px;
+  }
+  .vr-nm-unit {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: #1c1c1c;
+    margin-bottom: 2px;
+  }
+  .vr-nm-gain {
+    font-family: var(--font-display); font-size: 9px; font-weight: 700;
+    color: rgba(200,145,0,0.45);
+  }
+  .vr-locked {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 5px;
+  }
+  .vr-lock-box {
+    width: 22px; height: 22px; background: #0c0c0c;
+    border: 1px solid #111; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #1c1c1c;
+  }
+  .vr-lock-txt {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: #181818;
+    text-align: center; line-height: 1.8;
+  }
+
+  /* ── CTA ── */
+  .vr-cta {
+    width: 100%; background: var(--red); color: #fff; border: none;
+    font-family: var(--font-display); font-size: 12px; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase;
+    padding: 14px 16px; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; transition: all 0.2s; position: relative; overflow: hidden;
+    box-shadow: 0 3px 16px rgba(232,0,29,0.22);
+  }
+  .vr-cta::after {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,rgba(255,255,255,0.07) 0%,transparent 50%);
+    pointer-events:none;
+  }
+  .vr-cta:hover { background:#ff001a; box-shadow:0 6px 26px rgba(232,0,29,0.45); transform:translateY(-1px); }
+  .vr-cta-sub {
+    font-size:9px; letter-spacing:1px; opacity:0.55;
+    display:flex; align-items:center; gap:4px; white-space:nowrap;
+  }
+
+  /* ── Reset ── */
+  .vr-back {
+    text-align:center;
+    font-size:9px; color:#1e1e1e; cursor:pointer;
+    font-family:var(--font-display); letter-spacing:2px; text-transform:uppercase;
+    transition:color 0.2s; user-select:none;
+  }
+  .vr-back:hover { color:#555; }
+
+
+  /* ══════════════════════════════════════
+     APP BANNER
+     ══════════════════════════════════════ */
+  .app-banner {
+    display: grid; grid-template-columns: 1fr 420px;
+    gap: 40px; align-items: center;
+    background: #0d0d0d;
+    border: 1px solid #1e1e1e;
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 44px 0 44px 48px;
+    position: relative; overflow: visible;
+  }
+  .app-banner::before {
+    content: '';
+    position: absolute; top: -60px; right: 280px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(232,0,29,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .app-banner-label {
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--red);
+    margin-bottom: 12px;
+  }
+  .app-banner-title {
+    font-family: var(--font-display); font-size: clamp(42px, 5vw, 72px); font-weight: 900;
+    text-transform: uppercase; letter-spacing: -1px; line-height: 0.95;
+    color: var(--white); margin-bottom: 16px;
+  }
+  .app-banner-title span       { color: var(--red); }
+  .app-banner-title .app-word  {
+    color: var(--red);
+    position: relative; display: inline-block; padding: 0 6px;
+  }
+  .app-banner-title .app-word::before {
+    content: '';
+    position: absolute; inset: 0;
+    border: 2px solid var(--red); border-radius: 2px;
+  }
+  .app-banner-desc {
+    font-size: 13px; color: #777; line-height: 1.75;
+    max-width: 480px; margin-bottom: 20px;
+  }
+  .app-banner-features {
+    display: flex; flex-wrap: wrap; gap: 10px 24px;
+    margin-bottom: 28px;
+  }
+  .app-feature {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 600; color: #aaa;
+    font-family: var(--font-body);
+  }
+  .app-feature svg { color: var(--red); flex-shrink: 0; }
+
+  .app-banner-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .app-store-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: #161616; border: 1px solid #2a2a2a;
+    border-radius: 6px; padding: 10px 18px;
+    text-decoration: none; color: var(--white);
+    transition: all 0.2s;
+  }
+  .app-store-btn:hover { background: #1e1e1e; border-color: #3a3a3a; transform: translateY(-1px); }
+  .store-sub  { font-size: 9px; color: #666; letter-spacing: 1px; text-transform: uppercase; font-family: var(--font-body); }
+  .store-name { font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
+
+  /* Phone mockup */
+  /* App screenshot — no frame, blends into dark background */
+  .app-banner-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+    /* allow image to overflow upward */
+    margin-top: -60px;
+    margin-bottom: -60px;
+  }
+  .app-ui-img {
+    width: 420px;
+    height: auto;
+    display: block;
+    /* Kill the white background from the PNG */
+    mix-blend-mode: screen;
+    /* Slightly boost contrast so colours pop on dark bg */
+    filter: contrast(1.05) brightness(1.02);
+    /* Fade edges into the dark section */
+    mask-image:
+      linear-gradient(to left,  rgba(0,0,0,0) 0%, black 8%),
+      linear-gradient(to top,   rgba(0,0,0,0) 0%, black 6%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 0%, black 6%);
+    mask-composite: intersect;
+    -webkit-mask-image:
+      linear-gradient(to left,  rgba(0,0,0,0) 0%, black 8%),
+      linear-gradient(to top,   rgba(0,0,0,0) 0%, black 6%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 0%, black 6%);
+    -webkit-mask-composite: source-in;
+    /* subtle drop shadow */
+    filter: contrast(1.05) brightness(1.02) drop-shadow(0 20px 40px rgba(0,0,0,0.6));
+  }
+  .app-screen-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .app-screen-logo {
+    width: 28px; height: 28px; background: var(--red); border-radius: 6px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .app-screen-title { font-family: var(--font-display); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
+  .app-screen-sub   { font-size: 9px; color: #555; font-family: var(--font-body); }
+  .app-screen-notif {
+    margin-left: auto; background: var(--red); color: white;
+    font-size: 9px; font-weight: 800; width: 18px; height: 18px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+  }
+
+  .app-screen-job {
+    background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 10px;
+  }
+  .app-screen-job-label {
+    font-family: var(--font-display); font-size: 8px; font-weight: 700;
+    letter-spacing: 2px; color: var(--red); margin-bottom: 4px;
+  }
+  .app-screen-job-name {
+    font-family: var(--font-display); font-size: 13px; font-weight: 800;
+    color: var(--white); margin-bottom: 8px;
+  }
+  .app-progress-bar {
+    height: 3px; background: #1e1e1e; border-radius: 2px; margin-bottom: 6px;
+  }
+  .app-progress-fill { height: 100%; background: var(--red); border-radius: 2px; }
+  .app-screen-job-status {
+    font-size: 9px; color: #666; display: flex; align-items: center; gap: 5px;
+    font-family: var(--font-body);
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #00c85a;
+    animation: pulse-dot 1.5s ease-in-out infinite; flex-shrink: 0;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  .app-screen-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 6px; margin-bottom: 10px;
+  }
+  .app-screen-stat {
+    background: #0d0d0d; border: 1px solid #1a1a1a;
+    border-radius: 6px; padding: 8px 6px; text-align: center;
+  }
+  .app-stat-val   { font-family: var(--font-display); font-size: 13px; font-weight: 900; color: var(--white); }
+  .app-stat-val.red { color: var(--red); }
+  .app-stat-label { font-size: 8px; color: #555; margin-top: 2px; font-family: var(--font-body); }
+
+  .app-screen-cta {
+    background: var(--red); color: white; text-align: center;
+    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+    letter-spacing: 1px; padding: 9px; border-radius: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .app-banner { grid-template-columns: 1fr; }
+    .app-banner-right { display: none; }
+  }
+
+
+  /* ── WhatsApp enquiry button ── */
+  .app-wa-btn {
+    display: inline-flex; align-items: center; gap: 14px;
+    background: #111; border: 1px solid #25D366;
+    border-radius: 6px; padding: 14px 20px;
+    text-decoration: none; color: var(--white);
+    transition: all 0.2s; max-width: 340px;
+  }
+  .app-wa-btn svg:first-child { color: #25D366; flex-shrink: 0; }
+  .app-wa-btn:hover { background: #0d1a0f; border-color: #2eeb74; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(37,211,102,0.2); }
+  .wa-btn-sub  { font-size: 9px; color: #25D366; letter-spacing: 1px; text-transform: uppercase; font-family: var(--font-body); margin-bottom: 2px; }
+  .wa-btn-label { font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+  .wa-arrow { color: #555; margin-left: auto; flex-shrink: 0; }
+
+  /* ── Real app phone mockup ── */
+  .app-phone-screen {
+    background: #0f0f10; border-radius: 16px;
+    padding: 14px 12px; overflow: hidden;
+    font-family: var(--font-body);
+  }
+
+  /* Top bar */
+  .aps-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; padding-bottom: 10px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .aps-logo-wrap { display: flex; align-items: center; gap: 7px; }
+  .aps-logo-icon {
+    width: 22px; height: 22px; background: var(--red); border-radius: 4px;
+    font-family: var(--font-display); font-size: 12px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; color: white;
+  }
+  .aps-logo-text { font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #ddd; }
+  .aps-topbar-right { display: flex; align-items: center; gap: 8px; }
+  .aps-client-badge {
+    background: #1a1a1a; border: 1px solid #2a2a2a;
+    font-size: 8px; font-weight: 700; letter-spacing: 1.5px; color: #777;
+    padding: 2px 7px; border-radius: 3px; font-family: var(--font-display);
+  }
+
+  /* Home heading */
+  .aps-home-title {
+    font-family: var(--font-display); font-size: 18px; font-weight: 900;
+    color: var(--red); letter-spacing: 1px; line-height: 1; margin-bottom: 2px;
+  }
+  .aps-home-sub { font-size: 9px; color: #555; margin-bottom: 12px; }
+
+  /* Inbox / Settings */
+  .aps-icon-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .aps-icon-btn {
+    flex: 1; display: flex; align-items: center; gap: 6px; justify-content: center;
+    background: #1a1a1a; border: 1px solid #252525; border-radius: 5px;
+    font-size: 10px; font-weight: 600; color: #aaa; padding: 7px 10px;
+  }
+  .aps-icon-btn svg { color: #777; }
+
+  /* Add assistant */
+  .aps-assistant-row {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 10px; color: #777; padding: 7px 10px;
+    border: 1px solid #1e1e1e; border-radius: 5px;
+    margin-bottom: 10px;
+  }
+
+  /* Job Request button */
+  .aps-job-request-btn {
+    background: var(--red); color: white; border-radius: 5px;
+    padding: 10px; text-align: center;
+    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+    letter-spacing: 2px; display: flex; align-items: center; justify-content: center;
+    gap: 6px; margin-bottom: 12px;
+    box-shadow: 0 4px 14px rgba(232,0,29,0.3);
+  }
+
+  /* Job list */
+  .aps-list-title {
+    font-family: var(--font-display); font-size: 12px; font-weight: 800;
+    color: var(--white); margin-bottom: 4px;
+  }
+  .aps-pending-label {
+    font-size: 8px; font-weight: 700; letter-spacing: 2px; color: #555;
+    text-transform: uppercase; margin-bottom: 8px;
+    font-family: var(--font-display);
+  }
+
+  /* Job card */
+  .aps-job-card {
+    background: #141414; border: 1px solid var(--red);
+    border-radius: 6px; padding: 10px 10px 8px; 
+  }
+  .aps-job-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .aps-reg-no { font-size: 8px; color: #555; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-family: var(--font-display); }
+  .aps-job-num { font-family: var(--font-display); font-size: 20px; font-weight: 900; color: var(--white); letter-spacing: 1px; line-height: 1; }
+  .aps-invoice-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #aaa;
+    padding: 5px 8px; font-family: var(--font-display);
+    white-space: nowrap;
+  }
+  .aps-job-card-bottom { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .aps-status-row { display: flex; gap: 5px; }
+  .aps-status-dot { width: 18px; height: 18px; border-radius: 3px; }
+  .aps-status-dot.red   { background: var(--red); }
+  .aps-status-dot.green { background: #25a244; }
+  .aps-assigned { display: flex; flex-direction: column; align-items: flex-end; }
+  .aps-assigned-label { font-size: 7px; color: #555; text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-display); }
+  .aps-assigned-val   { font-size: 10px; font-weight: 800; color: #aaa; font-family: var(--font-display); letter-spacing: 1px; }
+  .aps-job-system-badge {
+    background: #1a0000; border: 1px solid #3a0000;
+    color: var(--red); font-size: 7px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+    display: inline-block; font-family: var(--font-display);
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ─── FLOATING SOCIAL SIDEBAR ─── -->
+<div class="social-sidebar">
+  <span class="social-sidebar-label">Follow</span>
+  <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+    <span class="social-tooltip">Facebook</span>
+  </a>
+  <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+    <span class="social-tooltip">Instagram</span>
+  </a>
+</div>
+
+<!-- ─── NAVIGATION ─── -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">
+    <img src="https://ik.imagekit.io/i36lgbwf2/mm-logo-final.png" alt="Micromise Auto Solutions" class="logo-img">
+  </a>
+  <ul class="nav-links">
+    <li><a href="#services">Services</a></li>
+    <li><a href="#process">Process</a></li>
+    <li><a href="#fleet">Fleet</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="#contact" class="nav-cta">Book Now →</a>
+</nav>
+
+<!-- ─── HERO ─── -->
+<div class="section-wrap">
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+
+    <!-- Car visual -->
+    <div class="hero-car">
+      <div class="car-glow"></div>
+      <div class="car-svg-wrap">
+        <svg viewBox="0 0 680 300" width="680" height="300" xmlns="http://www.w3.org/2000/svg" style="opacity:0.18; filter: drop-shadow(0 0 30px rgba(232,0,29,0.4));">
+          <!-- Car silhouette -->
+          <g fill="#cc0000">
+            <!-- Body -->
+            <ellipse cx="340" cy="210" rx="280" ry="18" opacity="0.3"/>
+            <!-- Main body -->
+            <path d="M80 195 Q90 170 130 155 L200 130 Q240 100 300 88 Q360 78 420 85 Q480 92 530 115 L590 155 Q620 170 620 195 Z" fill="#1a0000" stroke="#E8001D" stroke-width="1.5" opacity="0.9"/>
+            <!-- Cabin -->
+            <path d="M220 155 Q250 105 310 92 Q380 80 450 92 Q500 100 520 135 L540 155 Z" fill="#0d0000" stroke="#cc0000" stroke-width="1" opacity="0.8"/>
+            <!-- Hood slope -->
+            <path d="M80 195 L130 155 L200 130 L220 155 Z" fill="#150000" stroke="#cc0000" stroke-width="0.5" opacity="0.6"/>
+            <!-- Trunk slope -->
+            <path d="M520 135 L540 155 L590 155 L620 195 Z" fill="#150000" stroke="#cc0000" stroke-width="0.5" opacity="0.6"/>
+            <!-- Front bumper -->
+            <path d="M60 195 Q70 205 80 205 L80 195 Z" fill="#E8001D" opacity="0.6"/>
+            <!-- Rear -->
+            <path d="M620 195 L620 205 Q630 205 635 195 Z" fill="#E8001D" opacity="0.6"/>
+            <!-- Wheel arches -->
+            <circle cx="190" cy="200" r="38" fill="#080808" stroke="#cc0000" stroke-width="1.5"/>
+            <circle cx="490" cy="200" r="38" fill="#080808" stroke="#cc0000" stroke-width="1.5"/>
+            <!-- Wheels -->
+            <circle cx="190" cy="200" r="28" fill="#111" stroke="#E8001D" stroke-width="2"/>
+            <circle cx="190" cy="200" r="12" fill="#cc0000" opacity="0.7"/>
+            <circle cx="490" cy="200" r="28" fill="#111" stroke="#E8001D" stroke-width="2"/>
+            <circle cx="490" cy="200" r="12" fill="#cc0000" opacity="0.7"/>
+            <!-- Wheel spokes -->
+            <line x1="190" y1="172" x2="190" y2="228" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="162" y1="200" x2="218" y2="200" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="170" y1="180" x2="210" y2="220" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="210" y1="180" x2="170" y2="220" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="490" y1="172" x2="490" y2="228" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="462" y1="200" x2="518" y2="200" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="470" y1="180" x2="510" y2="220" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <line x1="510" y1="180" x2="470" y2="220" stroke="#E8001D" stroke-width="2" opacity="0.5"/>
+            <!-- Headlights -->
+            <path d="M95 175 L125 168 L125 182 L95 185 Z" fill="#E8001D" opacity="0.8"/>
+            <path d="M95 165 L130 158 L132 168 L95 175 Z" fill="#ff4444" opacity="0.6"/>
+            <!-- Taillights -->
+            <path d="M570 170 L600 173 L600 185 L570 183 Z" fill="#E8001D" opacity="0.7"/>
+            <!-- Side windows -->
+            <path d="M235 150 Q260 118 310 104 L370 97 L395 100 L380 150 Z" fill="#1a0a0a" stroke="#333" stroke-width="0.5" opacity="0.6"/>
+            <path d="M385 100 L440 97 Q480 100 510 130 L500 150 L390 150 Z" fill="#1a0a0a" stroke="#333" stroke-width="0.5" opacity="0.6"/>
+            <!-- Spoiler -->
+            <path d="M510 118 L560 125 L560 130 L510 123 Z" fill="#E8001D" opacity="0.5"/>
+            <!-- Ground reflection -->
+            <ellipse cx="340" cy="222" rx="260" ry="10" fill="url(#groundGlow)" opacity="0.4"/>
+          </g>
+          <defs>
+            <radialGradient id="groundGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#E8001D" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#E8001D" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="hero-content">
+      <div class="hero-badge fade-up">ECU Specialists</div>
+      <h1 class="hero-title fade-up stagger-1">
+        Unlock Your<br>
+        <span class="highlight">Engine's</span><br>
+        True Power.
+      </h1>
+      <p class="hero-sub fade-up stagger-2">
+        Professional ECU remapping and performance tuning delivering real-world gains. More power. Better economy. Engineered for results.
+      </p>
+      <div class="hero-stats fade-up stagger-3">
+        <div>
+          <div class="stat-num"><span class="counter" data-target="487">0</span><sup>+</sup></div>
+          <div class="stat-label">Projects Live</div>
+        </div>
+        <div>
+          <div class="stat-num"><span class="counter" data-target="36">0</span><sup>+</sup></div>
+          <div class="stat-label">Total Makes</div>
+        </div>
+        <div>
+          <div class="stat-num"><span class="counter" data-target="24">0</span><sup>H</sup></div>
+          <div class="stat-label">Turnarounds</div>
+        </div>
+      </div>
+      <div class="hero-actions fade-up stagger-4">
+        <a href="#contact" class="btn-primary">Get a Quote →</a>
+        <a href="#services" class="btn-secondary">View Services</a>
+      </div>
+    </div>
+
+    <!-- Scroll hint — centred at bottom of hero -->
+    <div class="scroll-hint">Scroll ↓</div>
+
+    <!-- Vehicle Finder — Premium UK VRM Component -->
+    <div class="hero-finder">
+
+      <!-- Header -->
+      <div class="finder-title">VRM Lookup</div>
+      <div class="finder-headline">Find Your Vehicle <span class="slash">//</span></div>
+      <p class="finder-sub">Enter your registration to get exact tuning options.</p>
+
+      <!-- UK Number Plate Input -->
+      <div class="uk-plate">
+        <!-- Authentic GB blue strip -->
+        <div class="plate-gb">
+          <div class="plate-stars">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+          <div class="plate-gb-text">GB</div>
+        </div>
+        <!-- Yellow plate field -->
+        <div class="plate-input-wrap">
+          <input type="text" class="reg-input" placeholder="AB12 CDE" maxlength="8" spellcheck="false" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Search Button -->
+      <button class="btn-search" id="vrm-search-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Search Vehicle →
+      </button>
+
+      <!-- Trust Signals -->
+      <ul class="finder-trust">
+        <li>
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div>
+            <div class="trust-label">Instant DVLA-based lookup</div>
+            <div class="trust-desc">Live data matched to your exact vehicle</div>
+          </div>
+        </li>
+        <li>
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div>
+            <div class="trust-label">Exact vehicle match</div>
+            <div class="trust-desc">Make, model, engine & ECU confirmed</div>
+          </div>
+        </li>
+        <li>
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div class="trust-label">Secure &amp; private check</div>
+            <div class="trust-desc">No data stored. No spam. Ever.</div>
+          </div>
+        </li>
+        <li>
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          </div>
+          <div>
+            <div class="trust-label">No obligation quote</div>
+            <div class="trust-desc">See your options. Commit when ready.</div>
+          </div>
+        </li>
+      </ul>
+
+      <!-- VRM Result v5 — original design -->
+      <div class="vrm-result" id="vrm-result">
+
+        <!-- Status bar + mini plate -->
+        <div class="vr-status">
+          <div class="vr-status-left">
+            <div class="vr-status-check">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span class="vr-status-label">Vehicle Matched</span>
+          </div>
+          <div class="vr-status-plate">
+            <div class="vr-plate-gb">GB</div>
+            <div class="vr-plate-num" id="res-reg">AB12 CDE</div>
+          </div>
+        </div>
+
+        <!-- Nameplate + 2×2 spec grid -->
+        <div class="vr-nameplate">
+          <div class="vr-name" id="res-make-model">BMW 3 SERIES 320D M SPORT</div>
+          <div class="vr-grid">
+            <!-- Fuel -->
+            <div class="vr-cell">
+              <div class="vr-icon i-fuel">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 22V8l4-5h10l4 5v14H3z"/>
+                  <path d="M3 12h18"/>
+                  <path d="M9 22v-8h6v8"/>
+                </svg>
+              </div>
+              <div>
+                <div class="vr-cell-lbl">Fuel</div>
+                <div class="vr-cell-val" id="res-fuel">Diesel</div>
+              </div>
+            </div>
+            <!-- Engine -->
+            <div class="vr-cell">
+              <div class="vr-icon i-engine">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="8" width="4" height="8" rx="1"/>
+                  <rect x="19" y="8" width="4" height="8" rx="1"/>
+                  <path d="M5 10h14"/>
+                  <path d="M5 14h14"/>
+                  <rect x="8" y="5" width="8" height="14" rx="1"/>
+                </svg>
+              </div>
+              <div>
+                <div class="vr-cell-lbl">Engine</div>
+                <div class="vr-cell-val" id="res-engine">2.0L (1995cc)</div>
+              </div>
+            </div>
+            <!-- Power -->
+            <div class="vr-cell">
+              <div class="vr-icon i-power">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="vr-cell-lbl">Stock Power</div>
+                <div class="vr-cell-val" id="res-stock-bhp">190 bhp</div>
+              </div>
+            </div>
+            <!-- Torque -->
+            <div class="vr-cell">
+              <div class="vr-icon i-torque">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2a9 9 0 0 0 0 18"/>
+                  <path d="M12 2v5"/>
+                  <path d="M9 4.5l3-2.5 3 2.5"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </div>
+              <div>
+                <div class="vr-cell-lbl">Torque</div>
+                <div class="vr-cell-val" id="res-stock-nm">400 Nm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variant + ECU -->
+        <div class="vr-meta">
+          <div class="vr-meta-left">
+            <div class="vr-field-lbl">Engine Variant · <span style="color:rgba(200,145,0,0.45);font-size:7px">Auto-matched</span></div>
+            <select class="vr-sel" id="res-variant">
+              <option>Diesel — 2.0 190 bhp (2015–2021)</option>
+              <option>Diesel — 2.0 150 bhp (2015–2021)</option>
+              <option>Petrol — 2.0 255 bhp (2016–2021)</option>
+            </select>
+          </div>
+          <div class="vr-ecu">
+            <div class="vr-ecu-top">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h2m2 0h2m2 0h2"/></svg>
+              <span class="vr-ecu-lbl">ECU</span>
+            </div>
+            <div class="vr-ecu-val" id="res-ecu">Bosch EDC17</div>
+          </div>
+        </div>
+
+        <!-- Power comparison -->
+        <div class="vr-power-hdr">
+          <span class="vr-power-hdr-lbl">Performance Gain</span>
+          <span class="vr-rec-pill">Stage 1 recommended</span>
+        </div>
+        <div class="vr-cards">
+          <!-- Stock -->
+          <div class="vr-card stock">
+            <div class="vr-card-bar"></div>
+            <div class="vr-card-body">
+              <div class="vr-card-lbl">Stock</div>
+              <div class="vr-num" id="res-bhp-stock">190</div>
+              <div class="vr-unit">BHP</div>
+              <div class="vr-nm" id="res-nm-stock">400</div>
+              <div class="vr-nm-unit">NM</div>
+            </div>
+          </div>
+          <!-- Stage 1 highlighted -->
+          <div class="vr-card s1">
+            <div class="vr-card-bar"></div>
+            <div class="vr-card-body">
+              <div class="vr-card-lbl">Stage 1</div>
+              <div class="vr-num" id="res-bhp-s1">240</div>
+              <div class="vr-unit">BHP</div>
+              <div class="vr-gain-tag" id="res-gain-bhp">+50</div>
+              <div class="vr-nm" id="res-nm-s1">500</div>
+              <div class="vr-nm-unit">NM</div>
+              <div class="vr-nm-gain" id="res-gain-nm">+100 Nm</div>
+            </div>
+          </div>
+          <!-- Stage 2 locked -->
+          <div class="vr-card s2">
+            <div class="vr-card-bar"></div>
+            <div class="vr-card-body">
+              <div class="vr-card-lbl">Stage 2</div>
+              <div class="vr-locked">
+                <div class="vr-lock-box">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="vr-lock-txt">Call for<br>details</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Book CTA -->
+        <button class="vr-cta" onclick="window.location.href='#contact'">
+          <span>Book Your Remap</span>
+          <span class="vr-cta-sub">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Free · No obligation
+          </span>
+        </button>
+
+        <!-- Reset -->
+        <div class="vr-back" id="vrm-reset-btn">← Search another vehicle</div>
+
+      </div>
+
+  </div>
+</div>
+
+<!-- ─── SERVICES ─── -->
+<div class="services-wrap" id="services">
+  <section>
+    <div class="services-header">
+      <div>
+        <div class="section-label">Why We Do</div>
+        <h2 class="section-title">ECU Solutions <span class="slash">//</span><br>Built for Results.</h2>
+      </div>
+      <div class="services-desc">
+        <p>Precision engineering meets real-world experience. Every tune we deliver is tailored, tested, and proven to extract the best from your engine — safely.</p>
+        <p>Twelve-plus services under one roof — all executed by hand, one vehicle at a time. No off-the-shelf just-files. No guesswork.</p>
+      </div>
+    </div>
+
+    <div class="services-grid">
+      <!-- Row 1 -->
+      <div class="service-card fade-up"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h2m2 0h2m2 0h2"/>
+        </svg>
+        <div class="service-name">Stage 1 Remap</div>
+        <div class="service-desc">Optimised factory software matched with custom calibration.</div>
+        <div class="service-tag">Petrol / Diesel</div>
+      </div>
+      <div class="service-card fade-up stagger-1"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M9 3.5A9 9 0 0 1 21 12"/>
+        </svg>
+        <div class="service-name">Stage 2 Remap</div>
+        <div class="service-desc">Hardware upgrades matched with custom calibration.</div>
+        <div class="service-tag">Petrol / Diesel</div>
+      </div>
+      <div class="service-card fade-up stagger-2"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 7h18M3 12h18M3 17h18"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="17" cy="12" r="1" fill="currentColor"/>
+        </svg>
+        <div class="service-name">DPF Solutions</div>
+        <div class="service-desc">DPF removal &amp; off solutions for performance and reliability.</div>
+        <div class="service-tag">Diesel</div>
+      </div>
+      <div class="service-card fade-up stagger-3"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+        <div class="service-name">EGR Solutions</div>
+        <div class="service-desc">EGR removal &amp; off for cleaner running and better response.</div>
+        <div class="service-tag">Diesel</div>
+      </div>
+      <div class="service-card fade-up stagger-4"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <div class="service-name">Pops &amp; Bangs</div>
+        <div class="service-desc">Custom pops &amp; bangs calibration for a more aggressive sound.</div>
+        <div class="service-tag">Petrol</div>
+      </div>
+      <!-- Row 2 -->
+      <div class="service-card fade-up"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/><path d="M22 2L12 12"/>
+        </svg>
+        <div class="service-name">Gearbox Remap</div>
+        <div class="service-desc">Smoother shifts, faster response, optimised gearbox behaviour.</div>
+        <div class="service-tag">Auto / DSG</div>
+      </div>
+      <div class="service-card fade-up stagger-1"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+        </svg>
+        <div class="service-name">Cooling Upgrades</div>
+        <div class="service-desc">Performance cooling solutions for sustained power.</div>
+        <div class="service-tag">All Vehicles</div>
+      </div>
+      <div class="service-card fade-up stagger-2"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <div class="service-name">AdBlue Solutions</div>
+        <div class="service-desc">AdBlue removal &amp; off solutions. No more limp mode.</div>
+        <div class="service-tag">Diesel</div>
+      </div>
+      <div class="service-card fade-up stagger-3"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><path d="M12 15v2"/>
+        </svg>
+        <div class="service-name">Fleet Solutions</div>
+        <div class="service-desc">Bespoke solutions for fleets. More efficiency, less downtime.</div>
+        <div class="service-tag">B2B / Fleet</div>
+      </div>
+      <div class="service-card fade-up stagger-4"><span class="corner-tr"></span><span class="corner-bl"></span><span class="corner-br"></span>
+        <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <div class="service-name">Custom Tuning</div>
+        <div class="service-desc">Bespoke calibrations for unique builds and specific requirements.</div>
+        <div class="service-tag">All Vehicles</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ─── MARQUEE ─── -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <!-- duplicated for seamless loop -->
+    <div class="marquee-item">
+      <span class="marquee-brand">Peugeot</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">BMW</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Mercedes</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Audi</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Volkswagen</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Ford</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Vauxhall</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Renault</span><span class="marquee-dot"></span>
+    </div>
+    <div class="marquee-item">
+      <span class="marquee-brand">Peugeot</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">BMW</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Mercedes</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Audi</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Volkswagen</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Ford</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Vauxhall</span><span class="marquee-dot"></span>
+      <span class="marquee-brand">Renault</span><span class="marquee-dot"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PROCESS ─── -->
+<div class="section-wrap alt" id="process">
+  <section>
+    <div class="process-header">
+      <div>
+        <div class="section-label">The Process</div>
+        <h2 class="section-title">From Enquiry <span class="slash">//</span><br>To Road-Ready.</h2>
+      </div>
+      <div class="process-desc">
+        <p>Our streamlined 4-step process gets you from first contact to peak performance — quickly, professionally, and hassle-free.</p>
+      </div>
+    </div>
+    <div class="process-steps">
+      <div class="process-step fade-up">
+        <div class="step-num">01</div>
+        <div class="step-name">Drop Us a Message</div>
+        <div class="step-desc">Tell us about your vehicle and what you're looking for. We'll take it from there.</div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="process-step fade-up stagger-1">
+        <div class="step-num">02</div>
+        <div class="step-name">Get a Fixed Quote</div>
+        <div class="step-desc">We'll provide a clear, transparent quote with no hidden extras.</div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="process-step fade-up stagger-2">
+        <div class="step-num">03</div>
+        <div class="step-name">Book Your Slot</div>
+        <div class="step-desc">Choose a time that suits you. We'll confirm and get you booked in.</div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="process-step fade-up stagger-3">
+        <div class="step-num">04</div>
+        <div class="step-name">Drive Away Fixed</div>
+        <div class="step-desc">Collect your vehicle with more power, better economy, and confidence.</div>
+      </div>
+    </div>
+
+    <!-- ── App Banner ── -->
+    <div class="app-banner fade-up" style="margin-top:40px;">
+      <div class="app-banner-left">
+        <div class="app-banner-label">// One-Stop Mobile App</div>
+        <div class="app-banner-title">
+          We Have Our Own <span class="app-word">APP</span>.<br>
+          <span>Always Free. Always Yours.</span>
+        </div>
+        <div class="app-banner-desc">Get a quote, raise a job request, track your vehicle live, and receive your invoice — all from the Micromise app. No calls needed. No chasing. 100% free, guaranteed.</div>
+        <div class="app-banner-features">
+          <div class="app-feature"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Instant quotes</div>
+          <div class="app-feature"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Live job tracking</div>
+          <div class="app-feature"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Digital invoices</div>
+          <div class="app-feature"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Always free — guaranteed</div>
+        </div>
+        <div class="app-banner-btns">
+          <a href="https://wa.me/447956123456?text=Hi%2C%20I%20am%20interested%20to%20enquire%20about%20a%20job" target="_blank" class="app-wa-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M11.996 2.004C6.46 2.004 2 6.465 2 12c0 1.89.522 3.655 1.43 5.175L2 22l4.948-1.406A9.94 9.94 0 0 0 11.996 22C17.532 22 22 17.535 22 12c0-5.536-4.468-9.996-10.004-9.996zm.004 18.19c-1.66 0-3.21-.46-4.53-1.258l-.325-.193-3.374.96.917-3.477-.21-.347A8.166 8.166 0 0 1 3.82 12C3.82 7.466 7.463 3.82 12 3.82c4.537 0 8.18 3.647 8.18 8.18 0 4.537-3.643 8.194-8.18 8.194z"/>
+            </svg>
+            <div>
+              <div class="wa-btn-sub">Tap to open WhatsApp</div>
+              <div class="wa-btn-label">Enquire About a Job</div>
+            </div>
+            <svg class="wa-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="app-banner-right">
+        <img
+          class="app-ui-img"
+          src="https://ik.imagekit.io/i36lgbwf2/app%20ui.png"
+          alt="Micromise App UI"
+          loading="lazy"
+          draggable="false"
+        >
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<!-- ─── FLEET ─── -->
+<div class="section-wrap" id="fleet">
+  <section>
+    <div class="fleet-grid">
+      <div>
+        <div class="section-label">Fleet Specialists</div>
+        <h2 class="section-title">Fleet Vans <span class="slash">//</span><br>Don't Stop.</h2>
+        <div class="fleet-items">
+          <div class="fleet-item fade-up">
+            <div class="fleet-num">01</div>
+            <div class="fleet-item-content">
+              <div class="fleet-item-title">Combined Remap</div>
+              <div class="fleet-item-desc">Combined remap solutions across your fleet for consistent performance and efficiency.</div>
+            </div>
+          </div>
+          <div class="fleet-item fade-up stagger-1">
+            <div class="fleet-num">02</div>
+            <div class="fleet-item-content">
+              <div class="fleet-item-title">Fleet Pricing</div>
+              <div class="fleet-item-desc">Competitively priced tailored for businesses and fleets. The more you have, the more you save.</div>
+            </div>
+          </div>
+          <div class="fleet-item fade-up stagger-2">
+            <div class="fleet-num">03</div>
+            <div class="fleet-item-content">
+              <div class="fleet-item-title">Fast Turnaround</div>
+              <div class="fleet-item-desc">Minimise downtime with our efficient process and priority scheduling.</div>
+            </div>
+          </div>
+          <div class="fleet-item fade-up stagger-3">
+            <div class="fleet-num">04</div>
+            <div class="fleet-item-content">
+              <div class="fleet-item-title">Remote &amp; Postal</div>
+              <div class="fleet-item-desc">Nationwide remote and postal remapping options available.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fleet-card fade-up stagger-2">
+        <div class="fleet-price">£0</div>
+        <div class="fleet-price-label">Ongoing AdBlue Repair Costs.</div>
+        <div class="fleet-price-desc">We remove the hassle and expense of AdBlue systems. No more warning lights, limp mode, or costly repairs. One fix. Long-term savings.</div>
+        <div class="fleet-tags">
+          <span class="fleet-tag">Ford Transit</span>
+          <span class="fleet-tag">Transit Custom</span>
+          <span class="fleet-tag">Mercedes Sprinter</span>
+          <span class="fleet-tag">VW Crafter</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ─── ESTIMATOR / GAINS CALCULATOR ─── -->
+<section class="estimator-section" id="estimator">
+  <div class="estimator-inner">
+    <div class="est-header">
+      <div class="est-marker">
+        <div class="est-marker-tag">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Free · Instant
+        </div>
+        <div class="est-marker-num">+30%</div>
+      </div>
+      <div class="est-headline-block">
+        <div class="est-eyebrow">Power Estimator // Step 01</div>
+        <h2 class="est-title">See Exactly What<br>Your Engine <span class="accent">Can Do.</span></h2>
+        <p class="est-sub">Pick your motor below — we'll show the real-world <strong>bhp</strong> and <strong>torque</strong> figures from a Stage 1 remap, side-by-side with stock.</p>
+      </div>
+    </div>
+
+    <form class="est-form" id="est-form" onsubmit="return false;">
+      <div class="est-grid">
+        <div class="est-field">
+          <label class="est-label" for="est-make">Make</label>
+          <div class="est-select-wrap">
+            <select class="est-select" id="est-make">
+              <option value="">Select Make</option>
+            </select>
+          </div>
+        </div>
+        <div class="est-field">
+          <label class="est-label" for="est-model">Model</label>
+          <div class="est-select-wrap">
+            <select class="est-select" id="est-model" disabled>
+              <option value="">Select Model</option>
+            </select>
+          </div>
+        </div>
+        <div class="est-field">
+          <label class="est-label" for="est-fuel">Fuel</label>
+          <div class="est-select-wrap">
+            <select class="est-select" id="est-fuel" disabled>
+              <option value="">Select Fuel</option>
+            </select>
+          </div>
+        </div>
+        <div class="est-field">
+          <label class="est-label" for="est-engine">Engine</label>
+          <div class="est-select-wrap">
+            <select class="est-select" id="est-engine" disabled>
+              <option value="">Select Engine</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="est-submit" id="est-submit" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/>
+        </svg>
+        Show My Gains
+      </button>
+    </form>
+
+    <div class="est-result" id="est-result">
+      <div class="est-vehicle" id="est-vehicle">—</div>
+      <div class="est-meta" id="est-meta"></div>
+      <div class="est-perf-label">Performance Gains</div>
+      <div class="est-stages">
+        <div class="est-stage">
+          <div class="est-stage-name">Stock</div>
+          <div class="est-numbers">
+            <div>
+              <div class="est-num" id="est-stock-bhp">—</div>
+              <div class="est-unit">bhp</div>
+            </div>
+            <div>
+              <div class="est-num" id="est-stock-nm">—</div>
+              <div class="est-unit">Nm</div>
+            </div>
+          </div>
+        </div>
+        <div class="est-stage s1">
+          <div class="est-stage-name">Stage 1 Remap</div>
+          <div class="est-numbers">
+            <div>
+              <div class="est-num" id="est-s1-bhp">—</div>
+              <div class="est-unit">bhp</div>
+              <span class="est-gain" id="est-gain-bhp">—</span>
+            </div>
+            <div>
+              <div class="est-num" id="est-s1-nm">—</div>
+              <div class="est-unit">Nm</div>
+              <span class="est-gain" id="est-gain-nm">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="est-bars">
+        <div class="est-bar-row">
+          <div class="est-bar-label">Power gain</div>
+          <div class="est-bar-track"><div class="est-bar-fill" id="est-bar-bhp"></div></div>
+          <div class="est-bar-pct" id="est-pct-bhp">+0%</div>
+        </div>
+        <div class="est-bar-row">
+          <div class="est-bar-label">Torque gain</div>
+          <div class="est-bar-track"><div class="est-bar-fill" id="est-bar-nm"></div></div>
+          <div class="est-bar-pct" id="est-pct-nm">+0%</div>
+        </div>
+      </div>
+      <div class="est-actions">
+        <a href="https://wa.me/447956123456" class="est-btn-book">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Book Your Remap — 07913 406 655
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ─── Estimator data ───
+  const EST_DATA = {
+    "BMW": {
+      "1 Series": { fuels: { "Petrol": { "118i (F20) — 136 bhp (2011-2019)": [136, 220, 165, 290], "M135i (F20) — 326 bhp (2012-2016)": [326, 450, 390, 580] }, "Diesel": { "118d (F20) — 150 bhp (2015-2019)": [150, 320, 195, 420], "120d (F20) — 184 bhp (2011-2019)": [184, 380, 230, 480] } } },
+      "3 Series": { fuels: { "Petrol": { "320i (F30) — 184 bhp (2012-2019)": [184, 270, 230, 360], "335i (F30) — 306 bhp (2012-2015)": [306, 400, 380, 550] }, "Diesel": { "320d (F30) — 184 bhp (2012-2019)": [184, 380, 230, 480], "330d (F30) — 258 bhp (2012-2019)": [258, 560, 320, 680] } } },
+      "4 Series": { fuels: { "Petrol": { "M4 GTS 493 bhp (F32/33 — 2013-2018)": [493, 600, 540, 720], "440i (F32) — 326 bhp (2016-2020)": [326, 450, 400, 580] }, "Diesel": { "420d (F32) — 190 bhp (2013-2020)": [190, 400, 240, 500] } } },
+      "5 Series": { fuels: { "Petrol": { "540i (G30) — 340 bhp (2017-2023)": [340, 450, 415, 580] }, "Diesel": { "520d (G30) — 190 bhp (2017-2023)": [190, 400, 240, 500], "530d (G30) — 265 bhp (2017-2023)": [265, 620, 330, 750] } } }
+    },
+    "Audi": {
+      "A3": { fuels: { "Petrol": { "1.4 TFSI — 150 bhp (2014-2020)": [150, 250, 195, 320], "S3 2.0 TFSI — 310 bhp (2016-2020)": [310, 400, 380, 510] }, "Diesel": { "2.0 TDI — 150 bhp (2014-2020)": [150, 340, 200, 430], "2.0 TDI — 184 bhp (2014-2020)": [184, 380, 230, 480] } } },
+      "A4": { fuels: { "Petrol": { "2.0 TFSI — 252 bhp (2015-2023)": [252, 370, 310, 470] }, "Diesel": { "2.0 TDI — 190 bhp (2015-2023)": [190, 400, 240, 500] } } },
+      "Q5": { fuels: { "Diesel": { "2.0 TDI — 190 bhp (2017-2023)": [190, 400, 240, 500], "3.0 TDI — 286 bhp (2017-2023)": [286, 620, 350, 760] } } }
+    },
+    "Volkswagen": {
+      "Golf": { fuels: { "Petrol": { "1.4 TSI — 150 bhp (Mk7 2013-2020)": [150, 250, 195, 320], "GTI 2.0 TSI — 245 bhp (Mk7.5)": [245, 370, 310, 470], "R 2.0 TSI — 310 bhp (Mk7.5)": [310, 400, 380, 510] }, "Diesel": { "2.0 TDI — 150 bhp (Mk7)": [150, 340, 200, 430], "GTD 2.0 TDI — 184 bhp": [184, 380, 230, 480] } } },
+      "Passat": { fuels: { "Diesel": { "2.0 TDI — 150 bhp (B8)": [150, 340, 200, 430], "2.0 TDI — 190 bhp (B8)": [190, 400, 240, 500] } } },
+      "Transporter": { fuels: { "Diesel": { "T6 2.0 TDI — 150 bhp": [150, 340, 200, 430], "T6 2.0 TDI — 204 bhp": [204, 450, 250, 560] } } }
+    },
+    "Ford": {
+      "Focus": { fuels: { "Petrol": { "1.0 EcoBoost — 125 bhp": [125, 200, 165, 275], "ST 2.3 EcoBoost — 280 bhp": [280, 420, 350, 540], "RS 2.3 EcoBoost — 350 bhp": [350, 470, 420, 600] }, "Diesel": { "1.5 TDCi — 120 bhp": [120, 270, 160, 350] } } },
+      "Ranger": { fuels: { "Diesel": { "2.0 EcoBlue — 170 bhp": [170, 405, 215, 510], "2.0 Bi-Turbo — 213 bhp": [213, 500, 260, 620] } } },
+      "Transit": { fuels: { "Diesel": { "2.0 EcoBlue — 130 bhp": [130, 360, 175, 460], "2.0 EcoBlue — 170 bhp": [170, 405, 215, 510] } } }
+    },
+    "Mercedes-Benz": {
+      "A-Class": { fuels: { "Petrol": { "A35 AMG — 306 bhp (W177)": [306, 400, 375, 510], "A45 AMG S — 421 bhp (W177)": [421, 500, 480, 600] }, "Diesel": { "A220d — 190 bhp": [190, 400, 240, 500] } } },
+      "C-Class": { fuels: { "Petrol": { "C300 — 258 bhp (W205)": [258, 370, 320, 470] }, "Diesel": { "C220d — 194 bhp": [194, 400, 240, 500], "C300d — 245 bhp": [245, 500, 305, 620] } } },
+      "Sprinter": { fuels: { "Diesel": { "313 CDI — 130 bhp": [130, 305, 175, 400], "316 CDI — 163 bhp": [163, 360, 210, 450] } } }
+    }
+  };
+
+  (function() {
+    const $ = id => document.getElementById(id);
+    const makeSel = $('est-make'), modelSel = $('est-model'), fuelSel = $('est-fuel'), engineSel = $('est-engine');
+    const submit = $('est-submit'), result = $('est-result');
+
+    function fillOptions(sel, values, placeholder) {
+      sel.innerHTML = '<option value="">' + placeholder + '</option>';
+      values.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
+    }
+    function reset(...sels) {
+      sels.forEach(s => { s.innerHTML = '<option value="">Select ' + s.id.replace('est-','').replace(/^./, c=>c.toUpperCase()) + '</option>'; s.disabled = true; });
+    }
+    function checkSubmit() {
+      const ok = makeSel.value && modelSel.value && fuelSel.value && engineSel.value;
+      submit.disabled = !ok;
+    }
+
+    // Populate makes
+    fillOptions(makeSel, Object.keys(EST_DATA), 'Select Make');
+
+    makeSel.addEventListener('change', () => {
+      reset(modelSel, fuelSel, engineSel);
+      hideResult();
+      if (makeSel.value) {
+        fillOptions(modelSel, Object.keys(EST_DATA[makeSel.value]), 'Select Model');
+        modelSel.disabled = false;
+      }
+      checkSubmit();
+    });
+    modelSel.addEventListener('change', () => {
+      reset(fuelSel, engineSel);
+      hideResult();
+      if (modelSel.value) {
+        fillOptions(fuelSel, Object.keys(EST_DATA[makeSel.value][modelSel.value].fuels), 'Select Fuel');
+        fuelSel.disabled = false;
+      }
+      checkSubmit();
+    });
+    fuelSel.addEventListener('change', () => {
+      reset(engineSel);
+      hideResult();
+      if (fuelSel.value) {
+        fillOptions(engineSel, Object.keys(EST_DATA[makeSel.value][modelSel.value].fuels[fuelSel.value]), 'Select Engine');
+        engineSel.disabled = false;
+      }
+      checkSubmit();
+    });
+    engineSel.addEventListener('change', () => { hideResult(); checkSubmit(); });
+
+    function hideResult() { result.classList.remove('visible'); }
+
+    submit.addEventListener('click', () => {
+      const make = makeSel.value, model = modelSel.value, fuel = fuelSel.value, engine = engineSel.value;
+      const [stockBhp, stockNm, s1Bhp, s1Nm] = EST_DATA[make][model].fuels[fuel][engine];
+      const gainBhp = s1Bhp - stockBhp, gainNm = s1Nm - stockNm;
+      const pctBhp = Math.round((gainBhp/stockBhp)*100), pctNm = Math.round((gainNm/stockNm)*100);
+
+      // Vehicle line
+      const enginePart = engine.split('—')[0].trim();
+      const codePart = engine.includes('—') ? engine.split('—').slice(1).join('—').trim() : '';
+      $('est-vehicle').textContent = `${make.toUpperCase()} ${model.toUpperCase()} — ${engine.toUpperCase()}`;
+
+      // Chips
+      const chassisMatch = engine.match(/\(([^)]+)\)/);
+      const chassis = chassisMatch ? chassisMatch[1] : '';
+      const ecuList = ['Bosch MEVD17.2','Bosch EDC17','Siemens SID208','Continental SIM2K','Delphi DCM3.7'];
+      const ecu = ecuList[(make.length + model.length) % ecuList.length];
+      $('est-meta').innerHTML = `
+        ${chassis ? `<span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${chassis}</span>` : ''}
+        <span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${stockBhp <= 200 ? '1968' : stockBhp <= 350 ? '2979' : '3996'} ccm</span>
+        <span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>${fuel}</span>
+        <span class="est-chip ecu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>ECU ${ecu}</span>
+      `;
+
+      // Numbers
+      $('est-stock-bhp').textContent = stockBhp;
+      $('est-stock-nm').textContent = stockNm;
+      $('est-s1-bhp').textContent = s1Bhp;
+      $('est-s1-nm').textContent = s1Nm;
+      $('est-gain-bhp').textContent = `+${gainBhp} bhp`;
+      $('est-gain-nm').textContent = `+${gainNm} Nm`;
+
+      // Bars (cap visual fill at 30% gain = 100% bar)
+      const bhpFill = Math.min(100, (pctBhp / 30) * 100);
+      const nmFill = Math.min(100, (pctNm / 30) * 100);
+      $('est-pct-bhp').textContent = `+${pctBhp}%`;
+      $('est-pct-nm').textContent = `+${pctNm}%`;
+
+      result.classList.add('visible');
+      // Trigger bar animation
+      $('est-bar-bhp').style.inset = '0 100% 0 0';
+      $('est-bar-nm').style.inset = '0 100% 0 0';
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          $('est-bar-bhp').style.inset = `0 ${100 - bhpFill}% 0 0`;
+          $('est-bar-nm').style.inset = `0 ${100 - nmFill}% 0 0`;
+        }, 80);
+      });
+
+      // Smooth scroll into view
+      setTimeout(() => {
+        const r = result.getBoundingClientRect();
+        const top = (window.scrollY || window.pageYOffset) + r.top - 40;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }, 200);
+    });
+  })();
+</script>
+
+<!-- ─── CTA BANNER ─── -->
+<div style="background:var(--red);">
+  <section class="cta-banner">
+    <div class="cta-inner">
+      <div>
+        <div class="cta-label">Stop Leaving Power on the Table</div>
+        <div class="cta-headline">Your Engine Has More to Give.<br>We Unlock It Today.</div>
+      </div>
+      <a href="https://wa.me/447956123456" class="btn-whatsapp">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.996 2.004C6.46 2.004 2 6.465 2 12c0 1.89.522 3.655 1.43 5.175L2 22l4.948-1.406A9.94 9.94 0 0 0 11.996 22C17.532 22 22 17.535 22 12c0-5.536-4.468-9.996-10.004-9.996zm.004 18.19c-1.66 0-3.21-.46-4.53-1.258l-.325-.193-3.374.96.917-3.477-.21-.347A8.166 8.166 0 0 1 3.82 12C3.82 7.466 7.463 3.82 12 3.82c4.537 0 8.18 3.647 8.18 8.18 0 4.537-3.643 8.194-8.18 8.194z"/></svg>
+        WhatsApp Us →
+      </a>
+    </div>
+  </section>
+</div>
+
+<!-- ─── CONTACT ─── -->
+<div class="section-wrap" id="contact">
+  <section>
+    <div class="contact-grid">
+      <div class="contact-info">
+        <div class="section-label">Get In Touch</div>
+        <h2 class="section-title">Let's Talk <span class="slash">//</span><br>About Your Motor.</h2>
+        <p class="contact-sub">Drop us a message and we'll come back with a fixed quote — usually within the first working day.</p>
+      </div>
+      <div class="contact-details">
+        <div class="contact-detail-item fade-up">
+          <div class="contact-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.7a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.7 16z"/></svg>
+          </div>
+          <div>
+            <div class="contact-item-label">Phone</div>
+            <div class="contact-item-value">07956 123456</div>
+          </div>
+        </div>
+        <div class="contact-detail-item fade-up stagger-1">
+          <div class="contact-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.7a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.7 16z"/></svg>
+          </div>
+          <div>
+            <div class="contact-item-label">Phone</div>
+            <div class="contact-item-value">+44 7810 143895</div>
+          </div>
+        </div>
+        <div class="contact-detail-item fade-up stagger-2">
+          <div class="contact-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div>
+            <div class="contact-item-label">Email</div>
+            <div class="contact-item-value">info@micromise.co.uk</div>
+          </div>
+        </div>
+      </div>
+      <div class="contact-hours fade-up stagger-1">
+        <div class="hours-card">
+          <div class="hours-header">
+            <div class="hours-title">This Week.</div>
+            <span class="open-badge">Open Now</span>
+          </div>
+          <div class="hours-row"><span class="hours-day">Monday</span><span class="hours-time">8:30AM – 6:00PM</span></div>
+          <div class="hours-row"><span class="hours-day">Tuesday</span><span class="hours-time">8:30AM – 6:00PM</span></div>
+          <div class="hours-row"><span class="hours-day">Wednesday</span><span class="hours-time">8:30AM – 6:00PM</span></div>
+          <div class="hours-row"><span class="hours-day">Thursday</span><span class="hours-time">8:30AM – 6:00PM</span></div>
+          <div class="hours-row"><span class="hours-day">Friday</span><span class="hours-time">8:30AM – 6:00PM</span></div>
+          <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00AM – 2:00PM</span></div>
+          <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-appt">By Appointment</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-top">
+    <a href="#" class="nav-logo">
+      <img src="https://ik.imagekit.io/i36lgbwf2/mm-logo-final.png" alt="Micromise Auto Solutions" class="logo-img-footer">
+    </a>
+    <ul class="footer-nav">
+      <li><a href="#services">Services</a></li>
+      <li><a href="#process">Process</a></li>
+      <li><a href="#fleet">Fleet</a></li>
+      <li><a href="#contact">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="footer-social">
+      <a class="social-btn" href="https://instagram.com" target="_blank" rel="noopener" title="Instagram">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a class="social-btn" href="https://tiktok.com" target="_blank" rel="noopener" title="TikTok">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.77 1.52V6.75a4.85 4.85 0 0 1-1-.06z"/></svg>
+      </a>
+      <a class="social-btn" href="https://youtube.com" target="_blank" rel="noopener" title="YouTube">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75,15.02 15.5,12 9.75,8.98 9.75,15.02" fill="currentColor" stroke="none"/></svg>
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2024 Micromise Auto Solutions. All rights reserved.</span>
+    <div class="footer-legal">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms &amp; Conditions</a>
+    </div>
+    <span class="footer-tagline">Professional ECU Remapping &amp; Tuning Services</span>
+  </div>
+</footer>
+
+<!-- ─── WHATSAPP FAB ─── -->
+<a href="https://wa.me/447956123456" class="whatsapp-fab" title="WhatsApp Us">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.996 2.004C6.46 2.004 2 6.465 2 12c0 1.89.522 3.655 1.43 5.175L2 22l4.948-1.406A9.94 9.94 0 0 0 11.996 22C17.532 22 22 17.535 22 12c0-5.536-4.468-9.996-10.004-9.996zm.004 18.19c-1.66 0-3.21-.46-4.53-1.258l-.325-.193-3.374.96.917-3.477-.21-.347A8.166 8.166 0 0 1 3.82 12C3.82 7.466 7.463 3.82 12 3.82c4.537 0 8.18 3.647 8.18 8.18 0 4.537-3.643 8.194-8.18 8.194z"/></svg>
+</a>
+
+<script>
+  // ─── NAV scroll effect
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 50);
+  });
+
+  // ─── Intersection observer for fade-up
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // ─── Counter animation
+  function animateCounter(el, target, duration = 1500) {
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start = Math.min(start + step, target);
+      el.textContent = Math.floor(start);
+      if (start >= target) clearInterval(timer);
+    }, 16);
+  }
+
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !e.target.dataset.counted) {
+        e.target.dataset.counted = true;
+        animateCounter(e.target, parseInt(e.target.dataset.target));
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.counter').forEach(el => counterObserver.observe(el));
+
+  // ─── VRM Lookup API config
+  // Point this at your deployed Cloudflare Worker. The Worker handles the
+  // Marketcheck API call server-side so the API key is never exposed to
+  // the browser. See worker.js + wrangler.toml in the deployment package.
+  const VRM_API_BASE = 'https://micromise-vrm-lookup.mkt-micromise.workers.dev';
+  // ↑ Replace YOUR-SUBDOMAIN with your actual Cloudflare Workers subdomain
+  // after running `wrangler deploy`. Or set it to a custom route once
+  // you've configured one (e.g. 'https://api.your-domain.co.uk').
+
+  // ─── UK Reg input — auto uppercase
+  const regInput = document.querySelector('.reg-input');
+  if (regInput) {
+    regInput.addEventListener('input', function() {
+      const pos = this.selectionStart;
+      this.value = this.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+      this.setSelectionRange(pos, pos);
+    });
+    regInput.addEventListener('focus', function() {
+      this.closest('.uk-plate').style.boxShadow =
+        '0 0 0 3px rgba(255,204,0,0.4), 0 0 24px rgba(255,204,0,0.18), inset 0 1px 3px rgba(0,0,0,0.15)';
+    });
+    regInput.addEventListener('blur', function() {
+      this.closest('.uk-plate').style.boxShadow = '';
+    });
+    // Enter key triggers search
+    regInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const btn = document.getElementById('vrm-search-btn');
+        if (btn) btn.click();
+      }
+    });
+  }
+
+  function showResult(reg, data) {
+    const panel = document.getElementById('vrm-result');
+    const trust = document.querySelector('.finder-trust');
+    const plate = document.querySelector('.uk-plate');
+    const hdr   = document.querySelector('.finder-headline');
+    const sub   = document.querySelector('.finder-sub');
+    const s = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    // Defensive: API can return null for BHP/Nm if the listing didn't have it.
+    const stockBhp = data.stockBhp != null ? data.stockBhp : '—';
+    const stockNm  = data.stockNm  != null ? data.stockNm  : '—';
+    const s1Bhp    = data.s1Bhp    != null ? data.s1Bhp    : '—';
+    const s1Nm     = data.s1Nm     != null ? data.s1Nm     : '—';
+    s('res-reg',       reg.toUpperCase().trim());
+    s('res-make-model',((data.make||'')+' '+(data.model||'')).trim().toUpperCase());
+    s('res-fuel',      data.fuel || '—');
+    s('res-engine',    data.engine || '—');
+    s('res-stock-bhp', stockBhp + (data.stockBhp != null ? ' bhp' : ''));
+    s('res-stock-nm',  stockNm + (data.stockNm != null ? ' Nm' : ''));
+    s('res-ecu',       data.ecu || 'Detected on diagnostic');
+    s('res-bhp-stock', stockBhp);
+    s('res-nm-stock',  stockNm);
+    s('res-bhp-s1',    s1Bhp);
+    s('res-nm-s1',     s1Nm);
+    if (data.s1Bhp != null && data.stockBhp != null) {
+      s('res-gain-bhp', '+' + (data.s1Bhp - data.stockBhp));
+    } else {
+      s('res-gain-bhp', '—');
+    }
+    if (data.s1Nm != null && data.stockNm != null) {
+      s('res-gain-nm', '+' + (data.s1Nm - data.stockNm) + ' Nm');
+    } else {
+      s('res-gain-nm', '—');
+    }
+    if(trust) trust.style.display='none';
+    if(plate) plate.style.display='none';
+    if(hdr)   hdr.style.display='none';
+    if(sub)   sub.style.display='none';
+    panel.classList.remove('visible'); void panel.offsetWidth; panel.classList.add('visible');
+  }
+
+  // Show a friendly error/not-found message under the search button.
+  // If `scrollToEstimator` is true, also scrolls the user to the manual estimator.
+  function showSearchError(message, scrollToEstimator) {
+    const btn = document.getElementById('vrm-search-btn');
+    if (btn) {
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Try again`;
+      btn.style.background    = '#7a1f1f';
+      btn.style.pointerEvents = 'auto';
+    }
+    let errEl = document.getElementById('vrm-error');
+    if (!errEl) {
+      errEl = document.createElement('div');
+      errEl.id = 'vrm-error';
+      errEl.style.cssText = 'margin-top:14px;padding:10px 14px;background:rgba(232,0,29,0.12);border:1px solid rgba(232,0,29,0.4);border-radius:8px;color:#ffb3b8;font:500 13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;text-align:center;cursor:pointer;';
+      if (btn && btn.parentNode) btn.parentNode.insertBefore(errEl, btn.nextSibling);
+    }
+    errEl.textContent = message;
+    if (scrollToEstimator) {
+      errEl.onclick = () => {
+        const est = document.getElementById('estimator');
+        if (est) est.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+    } else {
+      errEl.onclick = null;
+    }
+    setTimeout(() => {
+      if (errEl && errEl.parentNode) errEl.parentNode.removeChild(errEl);
+      if (btn) {
+        btn.innerHTML = originalBtnHTML;
+        btn.style.cssText = '';
+      }
+    }, 6000);
+  }
+  function resetSearch() {
+    const panel        = document.getElementById('vrm-result');
+    const btn          = document.getElementById('vrm-search-btn');
+    const trust        = document.querySelector('.finder-trust');
+    const plate        = document.querySelector('.uk-plate');
+    const searchHeader = document.querySelector('.finder-headline');
+    const finderSub    = document.querySelector('.finder-sub');
+    panel.classList.remove('visible');
+    if (trust)        trust.style.display        = '';
+    if (plate)        plate.style.display         = '';
+    if (searchHeader) searchHeader.style.display  = '';
+    if (finderSub)    finderSub.style.display      = '';
+    regInput.value    = '';
+    btn.innerHTML     = originalBtnHTML;
+    btn.style.cssText = '';
+  }
+
+  // ─── Search button
+  const searchBtn = document.getElementById('vrm-search-btn');
+  let originalBtnHTML = '';
+  if (searchBtn && regInput) {
+    originalBtnHTML = searchBtn.innerHTML;
+
+    searchBtn.addEventListener('click', async () => {
+      const val = regInput.value.trim().replace(/\s+/g, '');
+      if (!val || val.length < 2) {
+        const plate = regInput.closest('.uk-plate');
+        plate.style.borderColor = '#E8001D';
+        plate.style.boxShadow   = '0 0 0 3px rgba(232,0,29,0.4)';
+        setTimeout(() => { plate.style.borderColor = ''; plate.style.boxShadow = ''; }, 1800);
+        regInput.focus();
+        return;
+      }
+
+      // ── Loading state
+      searchBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" style="animation:spin 0.7s linear infinite;flex-shrink:0">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Searching...`;
+      searchBtn.style.background    = '#aa0015';
+      searchBtn.style.pointerEvents = 'none';
+
+      // ── Real API call to Cloudflare Worker
+      try {
+        const res = await fetch(
+          `${VRM_API_BASE}/api/lookup?vrm=${encodeURIComponent(val)}`,
+          { method: 'GET', headers: { 'Accept': 'application/json' } }
+        );
+        const payload = await res.json().catch(() => ({}));
+
+        if (!res.ok || !payload.ok) {
+          const isNotFound = res.status === 404 || payload.notFound;
+          showSearchError(
+            isNotFound
+              ? "We couldn't find this vehicle. Try the estimator below ↓"
+              : (payload.error || 'Lookup failed. Please try again.'),
+            isNotFound
+          );
+          return;
+        }
+
+        // ── Success state on button
+        searchBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Vehicle Matched`;
+        searchBtn.style.background    = '#007a3d';
+        searchBtn.style.boxShadow     = '0 4px 20px rgba(0,122,61,0.45)';
+        searchBtn.style.pointerEvents = 'auto';
+        // ── Show result panel
+        showResult(val, payload.data);
+      } catch (err) {
+        showSearchError('Network error. Please check your connection and try again.', false);
+      }
+    });
+
+    // Reset when user types new reg
+    regInput.addEventListener('input', () => {
+      const panel = document.getElementById('vrm-result');
+      if (panel.classList.contains('visible')) {
+        resetSearch();
+      }
+    });
+
+    // Reset button inside result panel
+    document.getElementById('vrm-reset-btn').addEventListener('click', resetSearch);
+  }
+
+  // ─── Custom cursor follower (desktop) ───
+  (function () {
+    if (matchMedia('(hover: none)').matches) return;
+    const dot = document.createElement('div');
+    dot.className = 'rp-cursor';
+    document.body.appendChild(dot);
+    let tx = 0, ty = 0, cx = 0, cy = 0;
+    document.addEventListener('mousemove', (e) => {
+      tx = e.clientX; ty = e.clientY;
+      dot.classList.add('active');
+    });
+    document.addEventListener('mouseleave', () => dot.classList.remove('active'));
+    function loop() {
+      cx += (tx - cx) * 0.22;
+      cy += (ty - cy) * 0.22;
+      dot.style.transform = `translate(${cx}px, ${cy}px) translate(-50%, -50%)`;
+      requestAnimationFrame(loop);
+    }
+    loop();
+    const hovers = 'a, button, .service-card, .btn-primary, .btn-secondary, .fleet-item, [role=button], input, textarea, select, .uk-plate';
+    document.addEventListener('mouseover', (e) => {
+      if (e.target.closest(hovers)) dot.classList.add('hover');
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (e.target.closest(hovers)) dot.classList.remove('hover');
+    });
+  })();
+</script>
+</body>
+</html>
