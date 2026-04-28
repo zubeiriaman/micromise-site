@@ -3362,6 +3362,15 @@
     s('res-stock-bhp', stockBhp + (data.stockBhp != null ? ' bhp' : ''));
     s('res-stock-nm',  stockNm + (data.stockNm != null ? ' Nm' : ''));
     s('res-ecu',       data.ecu || 'Detected on diagnostic');
+    // Show multiple ECUs if available
+    const ecuEl = document.getElementById('res-ecu');
+    if (ecuEl && data.ecus && data.ecus.length > 1) {
+      ecuEl.innerHTML = data.ecus.map((e, i) =>
+        i === 0
+          ? `<span style="display:block">${e}</span>`
+          : `<span style="display:block;font-size:11px;opacity:0.7;margin-top:2px">${e}</span>`
+      ).join('');
+    }
     s('res-bhp-stock', stockBhp);
     s('res-nm-stock',  stockNm);
     s('res-bhp-s1',    s1Bhp);
