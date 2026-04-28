@@ -3098,27 +3098,32 @@
 
     function hideResult() { result.classList.remove('visible'); }
 
-    submit.addEventListener('click', () => {
+    submit.addEventListener('click', async () => {
       const make = makeSel.value, model = modelSel.value, fuel = fuelSel.value, engine = engineSel.value;
       const [stockBhp, stockNm, s1Bhp, s1Nm] = _engines[engine] || [0,0,0,0];
       const gainBhp = s1Bhp - stockBhp, gainNm = s1Nm - stockNm;
       const pctBhp = Math.round((gainBhp/stockBhp)*100), pctNm = Math.round((gainNm/stockNm)*100);
 
       // Vehicle line
-      const enginePart = engine.split('—')[0].trim();
-      const codePart = engine.includes('—') ? engine.split('—').slice(1).join('—').trim() : '';
       $('est-vehicle').textContent = `${make.toUpperCase()} ${model.toUpperCase()} — ${engine.toUpperCase()}`;
+
+      // Look up real ECU from KSuite via Worker
+      let ecuDisplay = 'Detected on diagnostic';
+      try {
+        const ecuRes = await apiGet(`/api/ecu?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&hp=${stockBhp}&fuel=${encodeURIComponent(fuel)}`);
+        if (ecuRes && ecuRes.ok && ecuRes.ecus && ecuRes.ecus.length > 0) {
+          ecuDisplay = ecuRes.ecus.join(' / ');
+        }
+      } catch(e) {}
 
       // Chips
       const chassisMatch = engine.match(/\(([^)]+)\)/);
       const chassis = chassisMatch ? chassisMatch[1] : '';
-      const ecuList = ['Bosch MEVD17.2','Bosch EDC17','Siemens SID208','Continental SIM2K','Delphi DCM3.7'];
-      const ecu = ecuList[(make.length + model.length) % ecuList.length];
       $('est-meta').innerHTML = `
         ${chassis ? `<span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${chassis}</span>` : ''}
         <span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${stockBhp <= 200 ? '1968' : stockBhp <= 350 ? '2979' : '3996'} ccm</span>
         <span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>${fuel}</span>
-        <span class="est-chip ecu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>ECU ${ecu}</span>
+        <span class="est-chip ecu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>ECU: ${ecuDisplay}</span>
       `;
 
       // Numbers
