@@ -2620,6 +2620,15 @@
 
       </div>
 
+      <!-- Manual estimator link — always visible below result -->
+      <div class="finder-manual-card" id="finder-manual-card" onclick="document.getElementById('estimator').scrollIntoView({behavior:'smooth',block:'start'})">
+        <div class="finder-manual-inner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Or estimate your gains manually</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:auto;opacity:0.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+
   </div>
 </div>
 
@@ -3371,8 +3380,6 @@
     if(plate) plate.style.display='none';
     if(hdr)   hdr.style.display='none';
     if(sub)   sub.style.display='none';
-    const manualCard = document.getElementById('finder-manual-card');
-    if(manualCard) manualCard.style.display='none';
     panel.classList.remove('visible'); void panel.offsetWidth; panel.classList.add('visible');
   }
 
@@ -3429,8 +3436,7 @@
     if (manualCard)   manualCard.style.display     = '';
     regInput.value    = '';
     btn.innerHTML     = originalBtnHTML;
-    btn.style.cssText = '';
-  }
+    btn.style.cssText = '';  }
 
   // ─── Search button
   const searchBtn = document.getElementById('vrm-search-btn');
