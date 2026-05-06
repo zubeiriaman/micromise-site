@@ -3459,6 +3459,8 @@
   // Marketcheck API call server-side so the API key is never exposed to
   // the browser. See worker.js + wrangler.toml in the deployment package.
   const VRM_API_BASE = 'https://micromise-vrm-lookup.mkt-micromise.workers.dev';
+  // Save original VRM result HTML for restoration after DVLA model picker
+  window._originalVrmResultHTML = document.getElementById('vrm-result').innerHTML;
   // ↑ Replace mkt-micromise with your actual Cloudflare Workers subdomain
   // after running `wrangler deploy`. Or set it to a custom route once
   // you've configured one (e.g. 'https://api.your-domain.co.uk').
@@ -3631,14 +3633,28 @@
           const isNotFound = res.status === 404 || payload.notFound;
           showSearchError(
             isNotFound
-              ? "We couldn't find this vehicle. Try the estimator below ↓"
+              ? "Not found"
               : (payload.error || 'Lookup failed. Please try again.'),
             isNotFound
           );
           return;
         }
 
-        // ── Success state on button
+        // ── If partial DVLA response, show model picker instead
+        if (payload.partial && payload.dvla && payload.possibleModels) {
+          searchBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Select Your Model`;
+          searchBtn.style.background    = '#c89100';
+          searchBtn.style.boxShadow     = '0 4px 20px rgba(200,145,0,0.45)';
+          searchBtn.style.pointerEvents = 'auto';
+          showModelPicker(val, payload.dvla, payload.possibleModels);
+          return;
+        }
+
+        // ── Success state on button (full data from checkcardetails)
         searchBtn.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12"/>
@@ -3653,6 +3669,106 @@
         showSearchError('Network error. Please check your connection and try again.', false);
       }
     });
+
+    // Show a model picker when DVLA gives partial data
+    function showModelPicker(reg, dvla, models) {
+      const panel = document.getElementById('vrm-result');
+      const trust = document.querySelector('.finder-trust');
+      const plate = document.querySelector('.uk-plate');
+      const hdr   = document.querySelector('.finder-headline');
+      const sub   = document.querySelector('.finder-sub');
+      if(trust) trust.style.display='none';
+      if(plate) plate.style.display='none';
+      if(hdr)   hdr.style.display='none';
+      if(sub)   sub.style.display='none';
+
+      // Build picker HTML
+      panel.innerHTML = `
+        <div style="padding: 26px 28px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(200,145,0,0.15); display: flex; align-items: center; justify-content: center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c89100" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            </div>
+            <div style="font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #c89100;">Confirm your model</div>
+          </div>
+          <div style="font-family: var(--font-display); font-size: clamp(20px, 2.5vw, 28px); font-weight: 900; text-transform: uppercase; color: #fff; line-height: 1; margin-top: 8px;">
+            ${dvla.make} · ${dvla.engineCapacity}cc ${dvla.fuel} · ${dvla.year}
+          </div>
+          <div style="font-family: var(--font-body); font-size: 13px; color: #888; margin-top: 6px;">
+            ${dvla.colour} · plate ${reg}
+          </div>
+          <div style="margin-top: 22px;">
+            <label style="font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; display: block; margin-bottom: 8px;">Select your model</label>
+            <select id="dvla-model-picker" class="est-select" style="width:100%; padding: 14px 16px; background: #111; color: #fff; border: 1px solid #2a2a2a; border-radius: 6px; font-family: var(--font-body); font-size: 14px; appearance: none; cursor: pointer;">
+              <option value="">Select a model</option>
+              ${models.map((m, i) => `<option value="${i}">${m.model} — ${m.engine}</option>`).join('')}
+            </select>
+          </div>
+          <div id="dvla-result-area" style="margin-top: 16px;"></div>
+        </div>`;
+
+      panel.classList.remove('visible'); void panel.offsetWidth; panel.classList.add('visible');
+
+      const picker = document.getElementById('dvla-model-picker');
+      picker.addEventListener('change', () => {
+        const i = picker.value;
+        if (i === '') return;
+        const m = models[i];
+        // Construct a pseudo "full data" object compatible with showResult format
+        const data = {
+          make: m.make,
+          model: m.model,
+          variant: m.engine,
+          year: dvla.year,
+          colour: dvla.colour,
+          vehicleType: 'Car',
+          bodyStyle: '',
+          fuel: m.fuel,
+          engine: `${(dvla.engineCapacity/1000).toFixed(1)}L (${dvla.engineCapacity}cc)`,
+          engineSize: dvla.engineCapacity / 1000,
+          stockBhp: m.stockBhp,
+          stockNm: m.stockNm,
+          s1Bhp: m.s1Bhp,
+          s1Nm: m.s1Nm,
+          ecu: 'Detected on diagnostic',
+          ecus: [],
+          ecuKnown: false,
+          transmission: '',
+          mpg: null,
+          co2: dvla.co2,
+          source: 'dvla',
+        };
+
+        // Look up real ECU
+        fetch(`${VRM_API_BASE}/api/ecu?make=${encodeURIComponent(m.make)}&model=${encodeURIComponent(m.model)}&hp=${m.stockBhp}&fuel=${encodeURIComponent(m.fuel)}`)
+          .then(r => r.json()).then(ecuRes => {
+            if (ecuRes && ecuRes.ok && ecuRes.ecus && ecuRes.ecus.length > 0) {
+              data.ecu = ecuRes.ecus[0];
+              data.ecus = ecuRes.ecus;
+              data.ecuKnown = true;
+            }
+            // Restore the original VRM panel structure first, then show
+            location.hash = '#vrm-result';
+            window.scrollTo({ top: panel.offsetTop - 40, behavior: 'smooth' });
+            // Replace the picker view with the real result by rebuilding HTML — easier to reload
+            window._dvlaData = { vrm: reg, data };
+            showVrmResultFromDvla(reg, data);
+          });
+      });
+    }
+
+    // Render full result panel from DVLA-derived data (rebuilds standard panel HTML)
+    function showVrmResultFromDvla(reg, data) {
+      const panel = document.getElementById('vrm-result');
+      // Restore standard result HTML by reloading the page section
+      panel.innerHTML = window._originalVrmResultHTML;
+      panel.classList.add('visible');
+      // Re-attach reset button listener
+      const resetBtn = document.getElementById('vrm-reset-btn');
+      if (resetBtn) resetBtn.addEventListener('click', resetSearch);
+      // Now populate
+      showResult(reg, data);
+    }
 
     // Reset when user types new reg
     regInput.addEventListener('input', () => {
