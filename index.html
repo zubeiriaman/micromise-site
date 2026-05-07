@@ -2578,6 +2578,9 @@
           </div>
         </div>
 
+        <!-- Alternates dropdown ("Not your model?") — mounted by JS when relevant -->
+        <div id="vrm-alternates-anchor"></div>
+
         <!-- Variant + ECU -->
         <div class="vr-meta">
           <div class="vr-meta-left">
@@ -3601,20 +3604,17 @@
   // Render (or remove) the "Not your model?" dropdown above the reset button.
   // When the user picks model+variant, we re-fetch via /api/lookup-explicit.
   function renderAlternatesDropdown(reg, data) {
-    // Always remove any existing switcher before re-rendering
-    const existing = document.getElementById('vrm-alternates');
-    if (existing) existing.remove();
+    // Always clear anchor before re-rendering
+    const anchor = document.getElementById('vrm-alternates-anchor');
+    if (anchor) anchor.innerHTML = '';
 
     if (!data.alternates || data.alternates.length === 0) return;
-
-    const panel = document.getElementById('vrm-result');
-    const resetBtn = document.getElementById('vrm-reset-btn');
-    if (!panel || !resetBtn) return;
+    if (!anchor) return;
 
     const wrap = document.createElement('div');
     wrap.id = 'vrm-alternates';
     wrap.style.cssText =
-      'margin-top:18px;padding:14px 18px;' +
+      'margin-bottom:18px;padding:14px 18px;' +
       'background:rgba(232,0,29,0.06);' +
       'border:1px solid rgba(232,0,29,0.3);' +
       'border-radius:10px;';
@@ -3742,12 +3742,8 @@
     wrap.appendChild(headline);
     wrap.appendChild(row);
 
-    // Insert above the reset button
-    if (resetBtn.parentNode) {
-      resetBtn.parentNode.insertBefore(wrap, resetBtn);
-    } else {
-      panel.appendChild(wrap);
-    }
+    // Mount into anchor above Engine Variant
+    anchor.appendChild(wrap);
   }
 
   // Show a friendly error/not-found message under the search button.
