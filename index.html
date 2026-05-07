@@ -3551,7 +3551,7 @@
 
     // ── Stock figures (top 2x2 grid + Stage 1 cards)
     s('res-stock-bhp', fmtBhp(stockBhpRaw));
-    s('res-stock-nm',  stockNmRaw != null ? `${stockNmRaw} Nm` : '—');
+    s('res-stock-nm',  stockNmRaw != null ? `${Math.round(stockNmRaw)} Nm` : '—');
 
     // ── ECU display
     // Always show all distinct ECUs (matches industry standard).
@@ -3573,7 +3573,7 @@
 
     // ── Stage cards: numeric only (no units in number, units below)
     s('res-bhp-stock', stockBhpRaw != null ? (Number.isInteger(stockBhpRaw) ? String(stockBhpRaw) : stockBhpRaw.toFixed(1)) : '—');
-    s('res-nm-stock',  stockNmRaw  != null ? String(stockNmRaw) : '—');
+    s('res-nm-stock',  stockNmRaw  != null ? String(Math.round(stockNmRaw)) : '—');
     s('res-bhp-s1',    s1BhpRaw    != null ? String(s1BhpRaw)   : '—');
     s('res-nm-s1',     s1NmRaw     != null ? String(s1NmRaw)    : '—');
 
@@ -3583,7 +3583,7 @@
       s('res-gain-bhp', '—');
     }
     if (s1NmRaw != null && stockNmRaw != null) {
-      s('res-gain-nm', '+' + (s1NmRaw - stockNmRaw) + ' Nm');
+      s('res-gain-nm', '+' + Math.round(s1NmRaw - stockNmRaw) + ' Nm');
     } else {
       s('res-gain-nm', '—');
     }
