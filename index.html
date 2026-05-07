@@ -3140,7 +3140,7 @@
 
     // Load makes on page load
     apiGet('/api/makes').then(d => {
-      if (d && d.ok) fillOptions(makeSel, d.makes, 'Select Make');
+      if (d && d.makes) fillOptions(makeSel, d.makes, 'Select Make');
     });
 
     makeSel.addEventListener('change', async () => {
@@ -3151,7 +3151,7 @@
       makeSel.disabled = true;
       const d = await apiGet('/api/models?make=' + encodeURIComponent(makeSel.value));
       makeSel.disabled = false;
-      if (d && d.ok) { fillOptions(modelSel, d.models, 'Select Model'); modelSel.disabled = false; }
+      if (d && d.models) { fillOptions(modelSel, d.models, 'Select Model'); modelSel.disabled = false; }
       checkSubmit();
     });
 
@@ -3163,7 +3163,7 @@
       modelSel.disabled = true;
       const d = await apiGet('/api/fuels?make=' + encodeURIComponent(makeSel.value) + '&model=' + encodeURIComponent(modelSel.value));
       modelSel.disabled = false;
-      if (d && d.ok) { fillOptions(fuelSel, d.fuels, 'Select Fuel'); fuelSel.disabled = false; }
+      if (d && d.fuels) { fillOptions(fuelSel, d.fuels, 'Select Fuel'); fuelSel.disabled = false; }
       checkSubmit();
     });
 
@@ -3175,9 +3175,10 @@
       fuelSel.disabled = true;
       const d = await apiGet('/api/engines?make=' + encodeURIComponent(makeSel.value) + '&model=' + encodeURIComponent(modelSel.value) + '&fuel=' + encodeURIComponent(fuelSel.value));
       fuelSel.disabled = false;
-      if (d && d.ok) {
-        _engines = d.engines;
-        fillOptions(engineSel, Object.keys(d.engines), 'Select Engine');
+      if (d && d.engines && d.engines.length) {
+        // Store engines array keyed by label
+        d.engines.forEach(e => { _engines[e.label] = e; });
+        fillOptions(engineSel, d.engines.map(e => e.label), 'Select Engine');
         engineSel.disabled = false;
       }
       checkSubmit();
@@ -3188,32 +3189,31 @@
     function hideResult() { result.classList.remove('visible'); }
 
     submit.addEventListener('click', async () => {
-      const make = makeSel.value, model = modelSel.value, fuel = fuelSel.value, engine = engineSel.value;
-      const [stockBhp, stockNm, s1Bhp, s1Nm] = _engines[engine] || [0,0,0,0];
+      const make = makeSel.value, model = modelSel.value, fuel = fuelSel.value, engineLabel = engineSel.value;
+      const eng = _engines[engineLabel];
+      if (!eng) return;
+
+      // BHP from file's kW (database value)
+      const stockBhp = Math.round(eng.bhp);
+      // Nm: calculate from kW and fuel type
+      const isDiesel = fuel.toLowerCase().includes('diesel');
+      const stockNm = Math.round(stockBhp * (isDiesel ? 2.1 : 1.35));
+      // Stage 1 gains
+      const s1Bhp = Math.round(stockBhp * (isDiesel ? 1.22 : 1.18));
+      const s1Nm  = Math.round(stockNm  * (isDiesel ? 1.20 : 1.18));
       const gainBhp = s1Bhp - stockBhp, gainNm = s1Nm - stockNm;
       const pctBhp = Math.round((gainBhp/stockBhp)*100), pctNm = Math.round((gainNm/stockNm)*100);
 
       // Vehicle title
       $('est-vehicle').textContent = `${make} ${model}`;
+      $('est-vehicle-sub').textContent = `${eng.version} · ${fuel}${eng.year_range ? ' ' + eng.year_range : ''}`;
 
-      // Extract chassis code from engine label e.g. "E92 — 282 bhp"
-      const chassisMatch = engine.match(/^([A-Z]\d+\w*)\s*[—\-]/i);
-      const chassis = chassisMatch ? chassisMatch[1] : '';
-      $('est-vehicle-sub').textContent = `${engine} · ${fuel}`;
-
-      // ECU lookup
-      let ecuDisplay = 'Detected on diagnostic';
-      try {
-        const ecuRes = await apiGet(`/api/ecu?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&hp=${stockBhp}&fuel=${encodeURIComponent(fuel)}`);
-        if (ecuRes && ecuRes.ok && ecuRes.ecus && ecuRes.ecus.length > 0) {
-          ecuDisplay = ecuRes.ecus.slice(0,2).join(' / ');
-        }
-      } catch(e) {}
+      // ECU from engine entry
+      const ecuDisplay = eng.ecu || 'Detected on diagnostic';
 
       // Tags
       $('est-meta').innerHTML = `
-        ${chassis ? `<span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${chassis}</span>` : ''}
-        <span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${stockBhp <= 150 ? '1598' : stockBhp <= 220 ? '1995' : stockBhp <= 300 ? '2993' : '3996'} ccm</span>
+        <span class="est-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${eng.kw} kW · ${stockBhp} bhp</span>
         <span class="est-chip ecu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>ECU: ${ecuDisplay}</span>
       `;
 
