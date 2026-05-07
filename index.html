@@ -3554,14 +3554,13 @@
     s('res-stock-nm',  stockNmRaw != null ? `${stockNmRaw} Nm` : '—');
 
     // ── ECU display
-    // model_detected=true → single ECU (data.ecu).
-    // model_detected=false → all ECUs joined with " / " (data.ecu was already joined server-side).
+    // Always show all distinct ECUs (matches industry standard).
+    // Primary ECU rendered larger, alternates stacked below in smaller text.
     const ecuEl = document.getElementById('res-ecu');
     if (ecuEl) {
       ecuEl.textContent = '';
       const ecuList = (data.ecu_all && data.ecu_all.length) ? data.ecu_all : (data.ecu ? [data.ecu] : []);
-      if (data.model_detected === false && ecuList.length > 1) {
-        // Show all in stacked layout
+      if (ecuList.length > 1) {
         ecuEl.innerHTML = ecuList.map((e, i) =>
           i === 0
             ? `<span style="display:block">${e}</span>`
@@ -3727,7 +3726,6 @@
         }
         // Carry over the original alternates so user can keep correcting
         newPayload.alternates = data.alternates;
-        newPayload.model_detected = false;  // keep dropdown visible
         showResult(reg, newPayload);
       } catch (err) {
         applyBtn.textContent = 'Apply';
