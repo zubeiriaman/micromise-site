@@ -2581,19 +2581,15 @@
         <!-- Variant + ECU -->
         <div class="vr-meta">
           <div class="vr-meta-left">
-            <div class="vr-field-lbl">Engine Variant · <span style="color:rgba(200,145,0,0.45);font-size:7px">Auto-matched</span></div>
-            <select class="vr-sel" id="res-variant">
-              <option>Diesel — 2.0 190 bhp (2015–2021)</option>
-              <option>Diesel — 2.0 150 bhp (2015–2021)</option>
-              <option>Petrol — 2.0 255 bhp (2016–2021)</option>
-            </select>
+            <div class="vr-field-lbl">Engine Variant</div>
+            <div class="vr-variant-display" id="res-variant" style="font-family:var(--font-display);font-size:14px;font-weight:700;color:#ddd;padding:10px 0;">—</div>
           </div>
           <div class="vr-ecu">
             <div class="vr-ecu-top">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h2m2 0h2m2 0h2"/></svg>
               <span class="vr-ecu-lbl">ECU</span>
             </div>
-            <div class="vr-ecu-val" id="res-ecu">Bosch EDC17</div>
+            <div class="vr-ecu-val" id="res-ecu">—</div>
           </div>
         </div>
 
@@ -3506,6 +3502,12 @@
     s('res-make-model',((data.make||'')+' '+(data.model||'')).trim().toUpperCase());
     s('res-fuel',      data.fuel || '—');
     s('res-engine',    data.engine || '—');
+    // Engine Variant — show real variant from API
+    const variantParts = [];
+    if (data.variant) variantParts.push(data.variant);
+    else if (data.engine && data.fuel) variantParts.push(`${data.fuel} — ${data.engine}`);
+    if (data.year) variantParts.push(`(${data.year})`);
+    s('res-variant', variantParts.join(' ') || '—');
     s('res-stock-bhp', stockBhp + (data.stockBhp != null ? ' bhp' : ''));
     s('res-stock-nm',  stockNm + (data.stockNm != null ? ' Nm' : ''));
     s('res-ecu',       data.ecu || 'Detected on diagnostic');
