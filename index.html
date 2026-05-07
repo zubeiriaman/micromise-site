@@ -3642,17 +3642,23 @@
           return;
         }
 
-        // ── If partial DVLA response, show model picker instead
-        if (payload.partial && payload.dvla && payload.possibleModels) {
+        // ── If partial DVLA response, auto-select closest model and show full result
+        if (payload.partial && payload.dvla && payload.possibleModels && payload.possibleModels.length > 0) {
           searchBtn.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            Select Your Model`;
-          searchBtn.style.background    = '#c89100';
-          searchBtn.style.boxShadow     = '0 4px 20px rgba(200,145,0,0.45)';
+            Vehicle Matched`;
+          searchBtn.style.background    = '#007a3d';
+          searchBtn.style.boxShadow     = '0 4px 20px rgba(0,122,61,0.45)';
           searchBtn.style.pointerEvents = 'auto';
-          showModelPicker(val, payload.dvla, payload.possibleModels);
+          showDvlaResult(val, payload.dvla, payload.possibleModels, 0);
+          return;
+        }
+
+        // No models found at all
+        if (payload.partial && (!payload.possibleModels || payload.possibleModels.length === 0)) {
+          showSearchError("Not found", true);
           return;
         }
 
@@ -3672,104 +3678,86 @@
       }
     });
 
-    // Show a model picker when DVLA gives partial data
-    function showModelPicker(reg, dvla, models) {
-      const panel = document.getElementById('vrm-result');
-      const trust = document.querySelector('.finder-trust');
-      const plate = document.querySelector('.uk-plate');
-      const hdr   = document.querySelector('.finder-headline');
-      const sub   = document.querySelector('.finder-sub');
-      if(trust) trust.style.display='none';
-      if(plate) plate.style.display='none';
-      if(hdr)   hdr.style.display='none';
-      if(sub)   sub.style.display='none';
+    // Auto-select closest model from DVLA response and show full result
+    function showDvlaResult(reg, dvla, models, selectedIdx) {
+      const m = models[selectedIdx];
+      
+      // Build full data object for showResult
+      const data = {
+        make: m.make,
+        model: m.model,
+        variant: m.engine,
+        year: dvla.year,
+        colour: dvla.colour,
+        vehicleType: 'Car',
+        bodyStyle: '',
+        fuel: m.fuel,
+        engine: `${(dvla.engineCapacity/1000).toFixed(1)}L (${dvla.engineCapacity}cc)`,
+        engineSize: dvla.engineCapacity / 1000,
+        stockBhp: m.stockBhp,
+        stockNm: m.stockNm,
+        s1Bhp: m.s1Bhp,
+        s1Nm: m.s1Nm,
+        ecu: 'Detected on diagnostic',
+        ecus: [],
+        ecuKnown: false,
+        transmission: '',
+        mpg: null,
+        co2: dvla.co2,
+        source: 'dvla',
+      };
 
-      // Build picker HTML
-      panel.innerHTML = `
-        <div style="padding: 26px 28px;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(200,145,0,0.15); display: flex; align-items: center; justify-content: center;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c89100" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-            </div>
-            <div style="font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #c89100;">Confirm your model</div>
-          </div>
-          <div style="font-family: var(--font-display); font-size: clamp(20px, 2.5vw, 28px); font-weight: 900; text-transform: uppercase; color: #fff; line-height: 1; margin-top: 8px;">
-            ${dvla.make} · ${dvla.engineCapacity}cc ${dvla.fuel} · ${dvla.year}
-          </div>
-          <div style="font-family: var(--font-body); font-size: 13px; color: #888; margin-top: 6px;">
-            ${dvla.colour} · plate ${reg}
-          </div>
-          <div style="margin-top: 22px;">
-            <label style="font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; display: block; margin-bottom: 8px;">Select your model</label>
-            <select id="dvla-model-picker" class="est-select" style="width:100%; padding: 14px 16px; background: #111; color: #fff; border: 1px solid #2a2a2a; border-radius: 6px; font-family: var(--font-body); font-size: 14px; appearance: none; cursor: pointer;">
-              <option value="">Select a model</option>
-              ${models.map((m, i) => `<option value="${i}">${m.model} — ${m.engine}</option>`).join('')}
-            </select>
-          </div>
-          <div id="dvla-result-area" style="margin-top: 16px;"></div>
-        </div>`;
-
-      panel.classList.remove('visible'); void panel.offsetWidth; panel.classList.add('visible');
-
-      const picker = document.getElementById('dvla-model-picker');
-      picker.addEventListener('change', () => {
-        const i = picker.value;
-        if (i === '') return;
-        const m = models[i];
-        // Construct a pseudo "full data" object compatible with showResult format
-        const data = {
-          make: m.make,
-          model: m.model,
-          variant: m.engine,
-          year: dvla.year,
-          colour: dvla.colour,
-          vehicleType: 'Car',
-          bodyStyle: '',
-          fuel: m.fuel,
-          engine: `${(dvla.engineCapacity/1000).toFixed(1)}L (${dvla.engineCapacity}cc)`,
-          engineSize: dvla.engineCapacity / 1000,
-          stockBhp: m.stockBhp,
-          stockNm: m.stockNm,
-          s1Bhp: m.s1Bhp,
-          s1Nm: m.s1Nm,
-          ecu: 'Detected on diagnostic',
-          ecus: [],
-          ecuKnown: false,
-          transmission: '',
-          mpg: null,
-          co2: dvla.co2,
-          source: 'dvla',
-        };
-
-        // Look up real ECU
-        fetch(`${VRM_API_BASE}/api/ecu?make=${encodeURIComponent(m.make)}&model=${encodeURIComponent(m.model)}&hp=${m.stockBhp}&fuel=${encodeURIComponent(m.fuel)}`)
-          .then(r => r.json()).then(ecuRes => {
-            if (ecuRes && ecuRes.ok && ecuRes.ecus && ecuRes.ecus.length > 0) {
-              data.ecu = ecuRes.ecus[0];
-              data.ecus = ecuRes.ecus;
-              data.ecuKnown = true;
-            }
-            // Restore the original VRM panel structure first, then show
-            location.hash = '#vrm-result';
-            window.scrollTo({ top: panel.offsetTop - 40, behavior: 'smooth' });
-            // Replace the picker view with the real result by rebuilding HTML — easier to reload
-            window._dvlaData = { vrm: reg, data };
-            showVrmResultFromDvla(reg, data);
-          });
-      });
+      // Look up real ECU
+      fetch(`${VRM_API_BASE}/api/ecu?make=${encodeURIComponent(m.make)}&model=${encodeURIComponent(m.model)}&hp=${m.stockBhp}&fuel=${encodeURIComponent(m.fuel)}`)
+        .then(r => r.json()).then(ecuRes => {
+          if (ecuRes && ecuRes.ok && ecuRes.ecus && ecuRes.ecus.length > 0) {
+            data.ecu = ecuRes.ecus[0];
+            data.ecus = ecuRes.ecus;
+            data.ecuKnown = true;
+          }
+          renderDvlaResult(reg, data, dvla, models, selectedIdx);
+        }).catch(() => {
+          renderDvlaResult(reg, data, dvla, models, selectedIdx);
+        });
     }
 
-    // Render full result panel from DVLA-derived data (rebuilds standard panel HTML)
-    function showVrmResultFromDvla(reg, data) {
+    function renderDvlaResult(reg, data, dvla, models, selectedIdx) {
       const panel = document.getElementById('vrm-result');
-      // Restore standard result HTML by reloading the page section
+      // Restore standard result HTML
       panel.innerHTML = window._originalVrmResultHTML;
       panel.classList.add('visible');
-      // Re-attach reset button listener
+      // Re-attach reset
       const resetBtn = document.getElementById('vrm-reset-btn');
       if (resetBtn) resetBtn.addEventListener('click', resetSearch);
-      // Now populate
+      // Populate the result
       showResult(reg, data);
+
+      // Add "Not your model?" switcher if multiple options
+      if (models.length > 1) {
+        const resetBackBtn = document.getElementById('vrm-reset-btn');
+        const switcher = document.createElement('div');
+        switcher.id = 'dvla-switcher';
+        switcher.style.cssText = 'margin-top:18px;padding:14px 18px;background:rgba(232,0,29,0.06);border:1px solid rgba(232,0,29,0.25);border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+        switcher.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:160px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <span style="font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);">Not your model?</span>
+          </div>
+          <select id="dvla-switcher-sel" style="flex:2;min-width:200px;padding:8px 12px;background:#0a0a0b;color:#fff;border:1px solid rgba(232,0,29,0.4);border-radius:6px;font-family:var(--font-body);font-size:13px;cursor:pointer;">
+            ${models.map((mm, i) => `<option value="${i}" ${i===selectedIdx?'selected':''}>${mm.model} — ${mm.engine}</option>`).join('')}
+          </select>`;
+        if (resetBackBtn && resetBackBtn.parentNode) {
+          resetBackBtn.parentNode.insertBefore(switcher, resetBackBtn);
+        } else {
+          panel.appendChild(switcher);
+        }
+        document.getElementById('dvla-switcher-sel').addEventListener('change', (e) => {
+          const newIdx = parseInt(e.target.value);
+          if (!isNaN(newIdx)) {
+            showDvlaResult(reg, dvla, models, newIdx);
+          }
+        });
+      }
     }
 
     // Reset when user types new reg
