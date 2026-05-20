@@ -3669,12 +3669,50 @@
     const applyBtn = document.createElement('button');
     applyBtn.id = 'vrm-alt-apply';
     applyBtn.type = 'button';
-    applyBtn.textContent = 'Apply';
+    applyBtn.textContent = 'APPLY';
     applyBtn.style.cssText =
-      'padding:8px 16px;background:var(--red);color:#fff;' +
+      'padding:8px 18px;background:var(--red);color:#fff;' +
       'border:none;border-radius:6px;font-family:var(--font-display);' +
       'font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;' +
-      'cursor:pointer;';
+      'cursor:pointer;display:flex;align-items:center;gap:7px;' +
+      'transition:background 0.2s,transform 0.15s;min-width:90px;justify-content:center;';
+
+    function setApplyState(state) {
+      if (state === 'idle') {
+        applyBtn.innerHTML = 'APPLY';
+        applyBtn.style.background = 'var(--red)';
+        applyBtn.style.transform = 'scale(1)';
+        applyBtn.disabled = false;
+      } else if (state === 'loading') {
+        applyBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:vrm-spin 0.7s linear infinite;flex-shrink:0;">
+            <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <path d="M7 1.5 A5.5 5.5 0 0 1 12.5 7" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>`;
+        applyBtn.style.background = '#b5001a';
+        applyBtn.disabled = true;
+      } else if (state === 'done') {
+        applyBtn.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex-shrink:0;">
+            <circle cx="7.5" cy="7.5" r="6.5" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1"/>
+            <path d="M4.5 7.5 L6.5 9.5 L10.5 5.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+              style="stroke-dasharray:8;stroke-dashoffset:8;animation:vrm-draw 0.35s ease forwards;"/>
+          </svg>`;
+        applyBtn.style.background = '#1a7a3a';
+        applyBtn.disabled = true;
+      }
+    }
+
+    // Inject keyframes once
+    if (!document.getElementById('vrm-apply-keyframes')) {
+      const kf = document.createElement('style');
+      kf.id = 'vrm-apply-keyframes';
+      kf.textContent = `
+        @keyframes vrm-spin { to { transform: rotate(360deg); } }
+        @keyframes vrm-draw { to { stroke-dashoffset: 0; } }
+      `;
+      document.head.appendChild(kf);
+    }
 
     function populateVariants(alt, preselectKw) {
       variantSel.innerHTML = '';
@@ -3711,8 +3749,7 @@
       const altModel = modelSel.value;
       const altKw = Number(variantSel.value);
       if (!altModel || !altKw) return;
-      applyBtn.textContent = 'Loading...';
-      applyBtn.disabled = true;
+      setApplyState('loading');
       try {
         const url =
           `${VRM_API_BASE}/api/lookup-explicit?vrm=${encodeURIComponent(reg)}` +
@@ -3722,17 +3759,16 @@
         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
         const newPayload = await res.json();
         if (!res.ok || newPayload.error) {
-          applyBtn.textContent = 'Apply';
-          applyBtn.disabled = false;
+          setApplyState('idle');
           alert(newPayload.error || 'Lookup failed.');
           return;
         }
-        // Carry over the original alternates so user can keep correcting
+        // Show tick for 600ms then render result
+        setApplyState('done');
         newPayload.alternates = data.alternates;
-        showResult(reg, newPayload);
+        setTimeout(() => { showResult(reg, newPayload); }, 650);
       } catch (err) {
-        applyBtn.textContent = 'Apply';
-        applyBtn.disabled = false;
+        setApplyState('idle');
         alert('Network error.');
       }
     });
