@@ -3511,8 +3511,11 @@
     const stockBhpRaw = data.bhp != null ? Number(data.bhp) : null;
     const stockNmRaw  = data.nm  != null ? Number(data.nm)  : null;
 
-    // Stage 1 calc — diesel +22% bhp / +20% nm, petrol/other +18% / +18%.
-    const fuelLc = (data.fuel || '').toLowerCase();
+    // ── Fuel — use match.fuel (from the actual database entry) as authoritative.
+    // data.fuel comes from the API (checkcardetails/DVLA) and may be wrong when the
+    // user manually selects a different variant via the "Not your model?" dropdown.
+    const resolvedFuel = (data.match && data.match.fuel) ? data.match.fuel : (data.fuel || '');
+    const fuelLc = resolvedFuel.toLowerCase();
     const isDiesel = fuelLc.includes('diesel');
     const bhpMult = isDiesel ? 1.22 : 1.18;
     const nmMult  = isDiesel ? 1.20 : 1.18;
@@ -3528,8 +3531,8 @@
     const modelV2 = data.model_v2 ? ' ' + String(data.model_v2).toUpperCase() : '';
     s('res-make-model', makeModel + modelV2);
 
-    // ── Fuel
-    s('res-fuel', data.fuel || '—');
+    // ── Fuel display — use resolvedFuel (match.fuel takes priority over API fuel)
+    s('res-fuel', resolvedFuel || '—');
 
     // ── Engine display: e.g. "2.0L (1968cc)"
     if (data.engine_cc) {
