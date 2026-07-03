@@ -3591,9 +3591,9 @@
       s('res-gain-nm', '—');
     }
 
-    // ── "Not your model?" two-step dropdown — only when model couldn't be detected.
-    // Worker returns alternates: [{ model, model_lc, variants: [...] }, ...]
-    // Step 1 picks model, Step 2 picks variant. Auto-pre-selects the worker's primary guess.
+    // ── "Not your model?" two-step dropdown — always shown after every result.
+    // Fetches all models for this make from /api/alternates (database only, not API).
+    // Pre-selects the closest model match to what the API returned.
     renderAlternatesDropdown(reg, data);
 
     if(trust) trust.style.display='none';
@@ -3603,16 +3603,22 @@
     panel.classList.remove('visible'); void panel.offsetWidth; panel.classList.add('visible');
   }
 
-  // Render (or remove) the "Not your model?" dropdown above the reset button.
-  // When the user picks model+variant, we re-fetch via /api/lookup-explicit.
+  // Render the "Not your model?" dropdown — always shown after every result.
+  // Fetches all models for this make from /api/alternates (our database only).
+  // Pre-selects the model that best matches what the API returned.
   function renderAlternatesDropdown(reg, data) {
-    // Always clear anchor before re-rendering
     const anchor = document.getElementById('vrm-alternates-anchor');
     if (anchor) anchor.innerHTML = '';
+    const effectiveMake = data._originalMake || data.make;
+    if (!anchor || !effectiveMake) return;
 
-    if (!data.alternates || data.alternates.length === 0) return;
-    if (!anchor) return;
+    const selectCss =
+      'flex:1;min-width:140px;padding:8px 10px;' +
+      'background:#0a0a0b;color:#fff;' +
+      'border:1px solid rgba(232,0,29,0.4);border-radius:6px;' +
+      'font-family:var(--font-body);font-size:12px;cursor:pointer;';
 
+    // Build wrapper
     const wrap = document.createElement('div');
     wrap.id = 'vrm-alternates';
     wrap.style.cssText =
@@ -3634,38 +3640,16 @@
       '<span>Not your model?</span>';
 
     const row = document.createElement('div');
-    row.style.cssText =
-      'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
 
-    // Step 1 — model dropdown
     const modelSel = document.createElement('select');
     modelSel.id = 'vrm-alt-model';
-    modelSel.style.cssText =
-      'flex:1;min-width:160px;padding:8px 12px;' +
-      'background:#0a0a0b;color:#fff;' +
-      'border:1px solid rgba(232,0,29,0.4);border-radius:6px;' +
-      'font-family:var(--font-body);font-size:13px;cursor:pointer;';
+    modelSel.style.cssText = selectCss;
 
-    // Pre-select the worker's primary pick (data.model)
-    const primaryModel = (data.model || '').toLowerCase();
-    let primaryAltIdx = 0;
-    data.alternates.forEach((alt, i) => {
-      const opt = document.createElement('option');
-      opt.value = alt.model_lc;
-      opt.textContent = alt.model;
-      modelSel.appendChild(opt);
-      if (alt.model_lc === primaryModel || alt.model.toLowerCase() === primaryModel) {
-        primaryAltIdx = i;
-      }
-    });
-    modelSel.selectedIndex = primaryAltIdx;
-
-    // Step 2 — variant dropdown (populated based on selected model)
     const variantSel = document.createElement('select');
     variantSel.id = 'vrm-alt-variant';
-    variantSel.style.cssText = modelSel.style.cssText;
+    variantSel.style.cssText = selectCss;
 
-    // Apply button
     const applyBtn = document.createElement('button');
     applyBtn.id = 'vrm-alt-apply';
     applyBtn.type = 'button';
@@ -3703,7 +3687,6 @@
       }
     }
 
-    // Inject keyframes once
     if (!document.getElementById('vrm-apply-keyframes')) {
       const kf = document.createElement('style');
       kf.id = 'vrm-apply-keyframes';
@@ -3714,73 +3697,107 @@
       document.head.appendChild(kf);
     }
 
-    function populateVariants(alt, preselectKw) {
-      variantSel.innerHTML = '';
-      // Pre-select primary kW if available, else the highest-kW option
-      let preselectIdx = 0;
-      let highestKw = -1, highestIdx = 0;
-      alt.variants.forEach((v, i) => {
-        const opt = document.createElement('option');
-        opt.value = v.kw;
-        opt.dataset.label = v.label;
-        opt.textContent = v.label;
-        variantSel.appendChild(opt);
-        if (preselectKw && v.kw === preselectKw) preselectIdx = i;
-        if (v.kw > highestKw) { highestKw = v.kw; highestIdx = i; }
-      });
-      // If preselectKw not found, fall back to highest kW (sensible default)
-      variantSel.selectedIndex = preselectKw ? preselectIdx : highestIdx;
-    }
-
-    const initialAlt = data.alternates[primaryAltIdx];
-    const initialKw = (data.match && data.match.bhp != null && initialAlt)
-      ? (initialAlt.variants.find(v => Math.round(v.bhp) === Math.round(data.match.bhp)) || {}).kw
-      : null;
-    populateVariants(initialAlt, initialKw);
-
-    // When model changes, repopulate variants
-    modelSel.addEventListener('change', () => {
-      const alt = data.alternates.find(a => a.model_lc === modelSel.value);
-      if (alt) populateVariants(alt, null);
-    });
-
-    // Apply: re-fetch with explicit make/model/kw
-    applyBtn.addEventListener('click', async () => {
-      const altModel = modelSel.value;
-      const altKw = Number(variantSel.value);
-      if (!altModel || !altKw) return;
-      setApplyState('loading');
-      try {
-        const url =
-          `${VRM_API_BASE}/api/lookup-explicit?vrm=${encodeURIComponent(reg)}` +
-          `&make=${encodeURIComponent(data.make)}` +
-          `&model=${encodeURIComponent(altModel)}` +
-          `&kw=${altKw}`;
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        const newPayload = await res.json();
-        if (!res.ok || newPayload.error) {
-          setApplyState('idle');
-          alert(newPayload.error || 'Lookup failed.');
-          return;
-        }
-        // Show tick for 600ms then render result
-        setApplyState('done');
-        newPayload.alternates = data.alternates;
-        setTimeout(() => { showResult(reg, newPayload); }, 650);
-      } catch (err) {
-        setApplyState('idle');
-        alert('Network error.');
-      }
-    });
+    // Show loading state in dropdowns while fetching
+    modelSel.innerHTML = '<option>Loading models…</option>';
+    variantSel.innerHTML = '<option>—</option>';
+    applyBtn.disabled = true;
 
     row.appendChild(modelSel);
     row.appendChild(variantSel);
     row.appendChild(applyBtn);
     wrap.appendChild(headline);
     wrap.appendChild(row);
-
-    // Mount into anchor above Engine Variant
     anchor.appendChild(wrap);
+
+    // Fetch all models for this make from our database
+    fetch(`${VRM_API_BASE}/api/alternates?make=${encodeURIComponent(effectiveMake)}`, {
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(res => {
+      const alternates = res.alternates || [];
+      if (alternates.length === 0) { wrap.remove(); return; }
+
+      modelSel.innerHTML = '';
+
+      // Find best matching model: exact match first, then startsWith, then includes
+      const apiModelLc = (data.model || '').toLowerCase().trim();
+      let bestIdx = 0;
+      let bestScore = -1;
+      alternates.forEach((alt, i) => {
+        const altLc = alt.model_lc;
+        let score = 0;
+        if (altLc === apiModelLc) score = 3;
+        else if (apiModelLc.startsWith(altLc) || altLc.startsWith(apiModelLc)) score = 2;
+        else if (altLc.includes(apiModelLc) || apiModelLc.includes(altLc)) score = 1;
+        if (score > bestScore) { bestScore = score; bestIdx = i; }
+      });
+
+      alternates.forEach((alt, i) => {
+        const opt = document.createElement('option');
+        opt.value = alt.model_lc;
+        opt.textContent = alt.model;
+        modelSel.appendChild(opt);
+      });
+      modelSel.selectedIndex = bestIdx;
+
+      function populateVariants(alt) {
+        variantSel.innerHTML = '';
+        // Try to pre-select by matching bhp from current result
+        const currentBhp = data.bhp != null ? Math.round(Number(data.bhp)) : null;
+        const currentFuel = (data.match && data.match.fuel) ? data.match.fuel.toLowerCase() : (data.fuel || '').toLowerCase();
+        let bestVIdx = 0;
+        let bestVScore = -1;
+        alt.variants.forEach((v, i) => {
+          const opt = document.createElement('option');
+          opt.value = v.kw;
+          opt.textContent = v.label;
+          variantSel.appendChild(opt);
+          let score = 0;
+          if (currentBhp && Math.abs(Math.round(v.bhp) - currentBhp) <= 2) score += 2;
+          if (currentFuel && v.fuel && v.fuel.toLowerCase() === currentFuel) score += 1;
+          if (score > bestVScore) { bestVScore = score; bestVIdx = i; }
+        });
+        variantSel.selectedIndex = bestVIdx;
+      }
+
+      populateVariants(alternates[bestIdx]);
+      applyBtn.disabled = false;
+
+      modelSel.addEventListener('change', () => {
+        const alt = alternates.find(a => a.model_lc === modelSel.value);
+        if (alt) populateVariants(alt);
+      });
+
+      applyBtn.addEventListener('click', async () => {
+        const altModel = modelSel.value;
+        const altKw = Number(variantSel.value);
+        if (!altModel || !altKw) return;
+        setApplyState('loading');
+        try {
+          const url =
+            `${VRM_API_BASE}/api/lookup-explicit?vrm=${encodeURIComponent(reg)}` +
+            `&make=${encodeURIComponent(effectiveMake)}` +
+            `&model=${encodeURIComponent(altModel)}` +
+            `&kw=${altKw}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const newPayload = await res.json();
+          if (!res.ok || newPayload.error) {
+            setApplyState('idle');
+            alert(newPayload.error || 'Lookup failed.');
+            return;
+          }
+          setApplyState('done');
+          // Keep the same make for re-rendering alternates after apply
+          newPayload._originalMake = data.make;
+          setTimeout(() => { showResult(reg, newPayload); }, 650);
+        } catch (err) {
+          setApplyState('idle');
+          alert('Network error.');
+        }
+      });
+    })
+    .catch(() => { wrap.remove(); });
   }
 
   // Show a friendly error/not-found message under the search button.
