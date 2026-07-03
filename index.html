@@ -3776,20 +3776,27 @@
 
       populateVariants(alternates[bestIdx]);
 
-      // Model change → repopulate variants only, no fetch yet
+      // Model change → repopulate variants; if only 1 variant, auto-fetch immediately
       modelSel.addEventListener('change', () => {
         setStatus('idle');
         const alt = alternates.find(a => a.model_lc === modelSel.value);
-        if (alt) populateVariants(alt);
+        if (!alt) return;
+        populateVariants(alt);
+        // If only one variant, fetch straight away (no variant change event will fire)
+        if (alt.variants.length === 1) {
+          doLookup(modelSel.value, Number(variantSel.value));
+        }
       });
 
       // Variant change → auto-fetch and update result
-      variantSel.addEventListener('change', () => {
+      // Use both 'change' and track manual selection via pointerup for same-option re-select
+      function triggerVariantLookup() {
         const altModel = modelSel.value;
         const altKw = Number(variantSel.value);
         if (!altModel || !altKw) return;
         doLookup(altModel, altKw);
-      });
+      }
+      variantSel.addEventListener('change', triggerVariantLookup);
     })
     .catch(() => { wrap.remove(); });
   }
