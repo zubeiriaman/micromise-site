@@ -3650,40 +3650,27 @@
     variantSel.id = 'vrm-alt-variant';
     variantSel.style.cssText = selectCss;
 
-    const applyBtn = document.createElement('button');
-    applyBtn.id = 'vrm-alt-apply';
-    applyBtn.type = 'button';
-    applyBtn.textContent = 'APPLY';
-    applyBtn.style.cssText =
-      'padding:8px 18px;background:var(--red);color:#fff;' +
-      'border:none;border-radius:6px;font-family:var(--font-display);' +
-      'font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;' +
-      'cursor:pointer;display:flex;align-items:center;gap:7px;' +
-      'transition:background 0.2s,transform 0.15s;min-width:90px;justify-content:center;';
+    // Status indicator (spinner / tick) — shown inline after variant dropdown
+    const statusEl = document.createElement('span');
+    statusEl.id = 'vrm-alt-status';
+    statusEl.style.cssText = 'display:flex;align-items:center;flex-shrink:0;width:22px;height:22px;';
 
-    function setApplyState(state) {
+    function setStatus(state) {
       if (state === 'idle') {
-        applyBtn.innerHTML = 'APPLY';
-        applyBtn.style.background = 'var(--red)';
-        applyBtn.style.transform = 'scale(1)';
-        applyBtn.disabled = false;
+        statusEl.innerHTML = '';
       } else if (state === 'loading') {
-        applyBtn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:vrm-spin 0.7s linear infinite;flex-shrink:0;">
-            <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-            <path d="M7 1.5 A5.5 5.5 0 0 1 12.5 7" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        statusEl.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="animation:vrm-spin 0.7s linear infinite;">
+            <circle cx="9" cy="9" r="7" stroke="rgba(232,0,29,0.25)" stroke-width="2"/>
+            <path d="M9 2 A7 7 0 0 1 16 9" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
           </svg>`;
-        applyBtn.style.background = '#b5001a';
-        applyBtn.disabled = true;
       } else if (state === 'done') {
-        applyBtn.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex-shrink:0;">
-            <circle cx="7.5" cy="7.5" r="6.5" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1"/>
-            <path d="M4.5 7.5 L6.5 9.5 L10.5 5.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-              style="stroke-dasharray:8;stroke-dashoffset:8;animation:vrm-draw 0.35s ease forwards;"/>
+        statusEl.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="8" fill="rgba(26,122,58,0.15)" stroke="#1a7a3a" stroke-width="1.5"/>
+            <path d="M5.5 9 L7.5 11 L12.5 6" stroke="#1a7a3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              style="stroke-dasharray:10;stroke-dashoffset:10;animation:vrm-draw 0.3s ease forwards;"/>
           </svg>`;
-        applyBtn.style.background = '#1a7a3a';
-        applyBtn.disabled = true;
       }
     }
 
@@ -3697,17 +3684,44 @@
       document.head.appendChild(kf);
     }
 
-    // Show loading state in dropdowns while fetching
+    // Show loading placeholders while fetching models
     modelSel.innerHTML = '<option>Loading models…</option>';
     variantSel.innerHTML = '<option>—</option>';
-    applyBtn.disabled = true;
 
     row.appendChild(modelSel);
     row.appendChild(variantSel);
-    row.appendChild(applyBtn);
+    row.appendChild(statusEl);
     wrap.appendChild(headline);
     wrap.appendChild(row);
     anchor.appendChild(wrap);
+
+    async function doLookup(altModel, altKw) {
+      setStatus('loading');
+      modelSel.disabled = true;
+      variantSel.disabled = true;
+      try {
+        const url =
+          `${VRM_API_BASE}/api/lookup-explicit?vrm=${encodeURIComponent(reg)}` +
+          `&make=${encodeURIComponent(effectiveMake)}` +
+          `&model=${encodeURIComponent(altModel)}` +
+          `&kw=${altKw}`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const newPayload = await res.json();
+        if (!res.ok || newPayload.error) {
+          setStatus('idle');
+          modelSel.disabled = false;
+          variantSel.disabled = false;
+          return;
+        }
+        setStatus('done');
+        newPayload._originalMake = effectiveMake;
+        setTimeout(() => { showResult(reg, newPayload); }, 600);
+      } catch (err) {
+        setStatus('idle');
+        modelSel.disabled = false;
+        variantSel.disabled = false;
+      }
+    }
 
     // Fetch all models for this make from our database
     fetch(`${VRM_API_BASE}/api/alternates?make=${encodeURIComponent(effectiveMake)}`, {
@@ -3743,7 +3757,6 @@
 
       function populateVariants(alt) {
         variantSel.innerHTML = '';
-        // Try to pre-select by matching bhp from current result
         const currentBhp = data.bhp != null ? Math.round(Number(data.bhp)) : null;
         const currentFuel = (data.match && data.match.fuel) ? data.match.fuel.toLowerCase() : (data.fuel || '').toLowerCase();
         let bestVIdx = 0;
@@ -3762,39 +3775,20 @@
       }
 
       populateVariants(alternates[bestIdx]);
-      applyBtn.disabled = false;
 
+      // Model change → repopulate variants only, no fetch yet
       modelSel.addEventListener('change', () => {
+        setStatus('idle');
         const alt = alternates.find(a => a.model_lc === modelSel.value);
         if (alt) populateVariants(alt);
       });
 
-      applyBtn.addEventListener('click', async () => {
+      // Variant change → auto-fetch and update result
+      variantSel.addEventListener('change', () => {
         const altModel = modelSel.value;
         const altKw = Number(variantSel.value);
         if (!altModel || !altKw) return;
-        setApplyState('loading');
-        try {
-          const url =
-            `${VRM_API_BASE}/api/lookup-explicit?vrm=${encodeURIComponent(reg)}` +
-            `&make=${encodeURIComponent(effectiveMake)}` +
-            `&model=${encodeURIComponent(altModel)}` +
-            `&kw=${altKw}`;
-          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          const newPayload = await res.json();
-          if (!res.ok || newPayload.error) {
-            setApplyState('idle');
-            alert(newPayload.error || 'Lookup failed.');
-            return;
-          }
-          setApplyState('done');
-          // Keep the same make for re-rendering alternates after apply
-          newPayload._originalMake = data.make;
-          setTimeout(() => { showResult(reg, newPayload); }, 650);
-        } catch (err) {
-          setApplyState('idle');
-          alert('Network error.');
-        }
+        doLookup(altModel, altKw);
       });
     })
     .catch(() => { wrap.remove(); });
