@@ -872,144 +872,145 @@
   /* ─── PROCESS ─── */
   .process-header {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 60px; align-items: start; margin-bottom: 60px;
+    gap: 48px; align-items: end; margin-bottom: 48px;
   }
-  .process-desc { padding-top: 20px; }
-  .process-desc p { font-size: 14px; color: var(--grey-light); line-height: 1.8; }
+  .process-desc p { font-size: 15px; color: var(--grey-light); line-height: 1.7; max-width: 380px; }
 
   .process-steps {
     display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 1px; background: #111;
-    border: 1px solid #111; border-radius: 4px; overflow: hidden;
+    gap: 0; background: var(--card-border);
   }
   .process-step {
-    background: var(--card); padding: 28px 22px;
-    position: relative; transition: background 0.25s, color 0.25s, transform 0.3s;
+    background: var(--black); padding: 32px 28px;
+    position: relative; transition: background 0.2s;
+    display: flex; flex-direction: column;
   }
-  .process-step:hover {
-    background: var(--red);
-    transform: translateY(-4px);
-    box-shadow: 0 16px 48px rgba(232,0,29,0.2);
-    z-index: 2;
-  }
-  .process-step:hover .step-num  { color: rgba(255,255,255,0.9); }
+  .process-step:hover { background: #0d0d0d; }
+  .process-step:hover .step-num  { color: var(--red); }
   .process-step:hover .step-name { color: #fff; }
-  .process-step:hover .step-desc { color: rgba(255,255,255,0.75); }
+  .process-step:hover .step-desc { color: var(--grey-light); }
 
-  .step-arrow {
-    position: absolute; right: -13px; top: 50%; transform: translateY(-50%);
-    width: 26px; height: 26px; background: var(--black);
-    border: 1px solid #1e1e1e; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; color: var(--red); z-index: 2;
-  }
-  .process-step:last-child .step-arrow { display: none; }
+  .step-arrow { display: none; }
 
   .step-num {
-    font-family: var(--font-display); font-size: 36px; font-weight: 900;
-    color: var(--red); line-height: 1; margin-bottom: 16px; opacity: 0.9;
+    font-family: var(--font-display); font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; color: var(--red);
+    margin-bottom: 16px; display: block;
+  }
+  .step-line {
+    width: 28px; height: 2px; background: var(--red);
+    margin-bottom: 18px; flex-shrink: 0;
   }
   .step-name {
-    font-family: var(--font-display); font-size: 14px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.5px; color: var(--white);
-    margin-bottom: 10px; line-height: 1.2;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 10px; color: var(--white); line-height: 1.1;
   }
-  .step-desc { font-size: 12px; color: var(--grey); line-height: 1.7; }
+  .step-desc { font-size: 13px; color: var(--grey-light); line-height: 1.65; flex: 1; }
 
   /* ─── FLEET ─── */
   .fleet-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 60px; align-items: start;
+    gap: 72px; align-items: start;
   }
-  .fleet-items { margin-top: 36px; display: flex; flex-direction: column; gap: 0; }
+  .fleet-items { margin-top: 36px; display: flex; flex-direction: column; gap: 0; background: var(--card-border); }
   .fleet-item {
+    background: var(--dark);
     display: flex; gap: 20px; align-items: flex-start;
-    padding: 22px 0; border-bottom: 1px solid #161616;
-    transition: background 0.3s, padding-left 0.3s cubic-bezier(0.2,0.8,0.2,1), border-color 0.3s;
+    padding: 28px 28px;
+    border-left: 2px solid transparent;
     position: relative;
+    transition: border-color 0.2s, background 0.2s;
   }
-  .fleet-item::before {
-    content: "→";
-    position: absolute;
-    left: -8px; top: 50%;
-    transform: translateY(-50%);
-    color: var(--red);
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 22px;
-    opacity: 0;
-    transition: opacity 0.25s ease, left 0.3s cubic-bezier(0.2,0.8,0.2,1);
-    pointer-events: none;
-  }
-  .fleet-item:hover::before {
-    opacity: 1;
-    left: -2px;
-  }
+  .fleet-item::before { display: none; }
+  .fleet-item:first-child { border-top: none; }
+  .fleet-item:hover::before { display: none; }
   .fleet-item:hover {
-    background: linear-gradient(90deg, rgba(232,0,29,0.06) 0%, rgba(232,0,29,0.0) 80%);
-    padding-left: 22px;
-    border-color: rgba(232,0,29,0.25);
-  }
+    border-left-color: var(--red);
+    background: #111;
+    padding-left: 28px;
+    border-color: var(--red);
   }
   .fleet-item:last-child { border-bottom: none; }
   .fleet-num {
     font-family: var(--font-display); font-size: 12px; font-weight: 700;
-    color: var(--red); letter-spacing: 1px; min-width: 24px; margin-top: 2px;
+    color: var(--red); letter-spacing: 1px;
+    flex-shrink: 0; padding-top: 2px;
   }
   .fleet-item-content {}
   .fleet-item-title {
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.5px; color: var(--white);
-    margin-bottom: 5px;
+    font-family: var(--font-display); font-size: 17px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
   }
-  .fleet-item-desc { font-size: 12px; color: var(--grey); line-height: 1.6; }
+  .fleet-item-desc { font-size: 13px; color: var(--grey-light); line-height: 1.6; }
 
   .fleet-card {
-    background: var(--card); border: 1px solid #1e1e1e; border-radius: 6px;
-    padding: 36px 32px;
-    border-left: 3px solid var(--red);
-    position: relative; overflow: hidden;
-    align-self: start; margin-top: 20px;
-    transition: transform 0.3s, box-shadow 0.3s;
+    background: var(--card); border: 1px solid var(--card-border);
+    padding: 36px 32px; position: relative;
+    overflow: hidden; transition: border-color 0.2s;
   }
-  .fleet-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(232,0,29,0.08);
-  }
+  .fleet-card:hover { border-color: rgba(232,0,29,0.3); }
   .fleet-card::before {
-    content: '';
-    position: absolute; top: -40px; left: -40px;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(232,0,29,0.08) 0%, transparent 70%);
-    pointer-events: none;
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: var(--red);
   }
   .fleet-price {
-    font-family: var(--font-display); font-size: 100px; font-weight: 900;
-    color: var(--red); line-height: 0.9; margin-bottom: 4px;
-    text-shadow: 0 0 60px rgba(232,0,29,0.3);
+    font-family: var(--font-display); font-size: 72px; font-weight: 900;
+    line-height: 1; color: var(--red); margin-bottom: 4px;
   }
   .fleet-price-label {
-    font-family: var(--font-display); font-size: 16px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1px; color: var(--white);
-    margin-bottom: 14px;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 20px;
   }
   .fleet-price-desc { font-size: 13px; color: var(--grey-light); line-height: 1.7; margin-bottom: 24px; }
   .fleet-tags { display: flex; flex-wrap: wrap; gap: 8px; }
   .fleet-tag {
-    font-family: var(--font-display); font-size: 10px; font-weight: 700;
-    letter-spacing: 1.5px; text-transform: uppercase; color: var(--grey);
-    border: 1px solid #2a2a2a; border-radius: 3px;
-    padding: 6px 12px; background: #0e0e0e;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    padding: 5px 12px; border: 1px solid var(--card-border);
+    font-size: 11px; color: var(--grey);
+    font-family: var(--font-display); font-weight: 600;
+    letter-spacing: .5px; text-transform: uppercase; transition: all 0.15s;
     cursor: default;
   }
   .fleet-tag:hover { border-color: var(--grey-dark); color: var(--white); background: #161616; }
+
+  .fleet-stat-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--card-border); margin-top: 36px;
+  }
+  .fleet-stat { background: var(--dark); padding: 18px 20px; text-align: center; }
+  .fleet-stat-num {
+    font-family: var(--font-display); font-size: 32px;
+    font-weight: 900; color: var(--white); line-height: 1;
+  }
+  .fleet-stat-num span { color: var(--red); }
+  .fleet-stat-label {
+    font-size: 10px; color: var(--grey);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    font-weight: 600; margin-top: 4px;
+  }
+
+  .fleet-single {
+    display: flex; flex-direction: column; justify-content: center;
+    height: 100%; padding: 8px 0;
+  }
+  .fleet-single-title {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 3.4vw, 46px); font-weight: 900;
+    text-transform: uppercase; line-height: 1.02;
+    letter-spacing: -0.5px; margin-bottom: 20px;
+  }
+  .fleet-single-title span { color: var(--red); }
+  .fleet-single-desc {
+    font-size: 15px; color: var(--grey-light);
+    line-height: 1.7; max-width: 400px;
+  }
 
   /* ─── ESTIMATOR / GAINS CALCULATOR ─── */
   .estimator-section {
     background:
       linear-gradient(180deg, #1a1a1d 0%, #161618 50%, #131316 100%);
-    padding: 110px 60px 120px;
+    padding: 110px 60px 60px;
     position: relative;
     overflow: hidden;
     border-top: 1px solid #242428;
@@ -1247,18 +1248,21 @@
   /* Result panel — lighter */
   /* ─── ESTIMATOR RESULT — BESPOKE DASHBOARD ─── */
   .est-result {
-    margin-top: 22px;
+    margin-top: 0;
     background: #0a0a0b;
     border: 1px solid #1e1e1e;
     border-radius: 10px;
     overflow: hidden;
     opacity: 0;
+    max-height: 0;
     transform: translateY(16px);
-    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2,0.8,0.2,1);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2,0.8,0.2,1), max-height 0.5s ease, margin-top 0.3s ease;
     pointer-events: none;
   }
   .est-result.visible {
     opacity: 1;
+    max-height: 2000px;
+    margin-top: 22px;
     transform: translateY(0);
     pointer-events: auto;
   }
@@ -1682,8 +1686,8 @@
     .services-grid { grid-template-columns: repeat(2, 1fr); }
     .process-steps { grid-template-columns: 1fr 1fr; }
     .services-header { grid-template-columns: 1fr; gap: 28px; }
-    .process-header { grid-template-columns: 1fr; gap: 28px; }
-    .fleet-grid { grid-template-columns: 1fr; gap: 40px; }
+    .process-header { grid-template-columns: 1fr; gap: 24px; }
+    .fleet-grid { grid-template-columns: 1fr; gap: 48px; }
     .vr-grid { grid-template-columns: 1fr 1fr; }
     .vr-cards { grid-template-columns: 1fr 1fr 1fr; }
   }
@@ -1735,7 +1739,8 @@
     .hero-actions { flex-direction: column; align-items: stretch; }
     .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; }
     .services-grid { grid-template-columns: 1fr; }
-    .process-steps { grid-template-columns: 1fr; }
+    .process-steps { grid-template-columns: 1fr; background: var(--card-border); }
+    .fleet-stat-row { grid-template-columns: repeat(3, 1fr); }
     .vr-grid { grid-template-columns: 1fr; }
     .section-title { font-size: clamp(34px, 9vw, 48px); }
     .est-title { font-size: clamp(30px, 8vw, 44px); }
@@ -2801,35 +2806,36 @@
     <div class="process-header">
       <div>
         <div class="section-label">The Process</div>
-        <h2 class="section-title">From Enquiry <span class="slash">//</span><br>To Road-Ready.</h2>
+        <h2 class="section-title">Booked. <span class="slash">//</span><br><em style="color:var(--red);font-style:italic;">Tuned.</em> Done.</h2>
       </div>
       <div class="process-desc">
-        <p>Our streamlined 4-step process gets you from first contact to peak performance — quickly, professionally, and hassle-free.</p>
+        <p>Four steps from your first message to driving away with more power. No jargon, no waiting rooms, no surprises on the invoice.</p>
       </div>
     </div>
     <div class="process-steps">
       <div class="process-step fade-up">
-        <div class="step-num">01</div>
-        <div class="step-name">Drop Us a Message</div>
-        <div class="step-desc">Tell us about your vehicle and what you're looking for. We'll take it from there.</div>
-        <div class="step-arrow">→</div>
+        <span class="step-num">01</span>
+        <div class="step-line"></div>
+        <div class="step-name">Tell Us Your Vehicle</div>
+        <div class="step-desc">Drop your reg plate or message us directly. We'll confirm exactly what's possible for your specific car — no guessing.</div>
       </div>
       <div class="process-step fade-up stagger-1">
-        <div class="step-num">02</div>
-        <div class="step-name">Get a Fixed Quote</div>
-        <div class="step-desc">We'll provide a clear, transparent quote with no hidden extras.</div>
-        <div class="step-arrow">→</div>
+        <span class="step-num">02</span>
+        <div class="step-line"></div>
+        <div class="step-name">Get a Fixed Price</div>
+        <div class="step-desc">We quote upfront — what we say it costs is what you pay. No hidden labour charges, no post-job surprises.</div>
       </div>
       <div class="process-step fade-up stagger-2">
-        <div class="step-num">03</div>
-        <div class="step-name">Book Your Slot</div>
-        <div class="step-desc">Choose a time that suits you. We'll confirm and get you booked in.</div>
-        <div class="step-arrow">→</div>
+        <span class="step-num">03</span>
+        <div class="step-line"></div>
+        <div class="step-name">Pick Your Time Slot</div>
+        <div class="step-desc">We come to you — home, work, wherever suits. Most jobs are done in 45–90 minutes, on your driveway.</div>
       </div>
       <div class="process-step fade-up stagger-3">
-        <div class="step-num">04</div>
-        <div class="step-name">Drive Away Fixed</div>
-        <div class="step-desc">Collect your vehicle with more power, better economy, and confidence.</div>
+        <span class="step-num">04</span>
+        <div class="step-line"></div>
+        <div class="step-name">Drive Away Stronger</div>
+        <div class="step-desc">More power, better throttle response, real fuel savings. You'll feel it on the first drive — guaranteed.</div>
       </div>
     </div>
 
@@ -2877,53 +2883,32 @@
 </div>
 
 <!-- ─── FLEET ─── -->
-<div class="section-wrap" id="fleet">
-  <section>
+<div class="section-wrap" id="fleet" style="border-top:1px solid #1a1a1a;">
+  <section style="padding-top:60px;">
     <div class="fleet-grid">
       <div>
         <div class="section-label">Fleet Specialists</div>
-        <h2 class="section-title">Fleet Vans <span class="slash">//</span><br>Don't Stop.</h2>
-        <div class="fleet-items">
-          <div class="fleet-item fade-up">
-            <div class="fleet-num">01</div>
-            <div class="fleet-item-content">
-              <div class="fleet-item-title">Combined Remap</div>
-              <div class="fleet-item-desc">Combined remap solutions across your fleet for consistent performance and efficiency.</div>
-            </div>
+        <h2 class="section-title">Your Fleet, <span class="slash">//</span><br><em style="color:var(--red);font-style:italic;">Always Moving.</em></h2>
+        <p style="font-size:15px;line-height:1.7;color:var(--grey-light);margin-top:16px;max-width:400px;">Downtime costs money. We remap your entire fleet around your schedule — nights, weekends, on-site — so your vans never miss a run.</p>
+        <a href="https://wa.me/447916143695?text=Hi%2C%20I%20want%20to%20enquire%20about%20fleet%20remapping" target="_blank" style="display:inline-flex;align-items:center;gap:10px;background:var(--red);color:#fff;font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:14px 28px;margin-top:28px;text-decoration:none;transition:background 0.2s;" onmouseover="this.style.background='#c00018'" onmouseout="this.style.background='var(--red)'">Get a Fleet Quote →</a>
+        <div class="fleet-stat-row">
+          <div class="fleet-stat">
+            <div class="fleet-stat-num">1000<span>+</span></div>
+            <div class="fleet-stat-label">Vans Tuned</div>
           </div>
-          <div class="fleet-item fade-up stagger-1">
-            <div class="fleet-num">02</div>
-            <div class="fleet-item-content">
-              <div class="fleet-item-title">Fleet Pricing</div>
-              <div class="fleet-item-desc">Competitively priced tailored for businesses and fleets. The more you have, the more you save.</div>
-            </div>
+          <div class="fleet-stat">
+            <div class="fleet-stat-num">24<span>h</span></div>
+            <div class="fleet-stat-label">Turnaround</div>
           </div>
-          <div class="fleet-item fade-up stagger-2">
-            <div class="fleet-num">03</div>
-            <div class="fleet-item-content">
-              <div class="fleet-item-title">Fast Turnaround</div>
-              <div class="fleet-item-desc">Minimise downtime with our efficient process and priority scheduling.</div>
-            </div>
-          </div>
-          <div class="fleet-item fade-up stagger-3">
-            <div class="fleet-num">04</div>
-            <div class="fleet-item-content">
-              <div class="fleet-item-title">Remote &amp; Postal</div>
-              <div class="fleet-item-desc">Nationwide remote and postal remapping options available.</div>
-            </div>
+          <div class="fleet-stat">
+            <div class="fleet-stat-num">5<span>★</span></div>
+            <div class="fleet-stat-label">Rated</div>
           </div>
         </div>
       </div>
-      <div class="fleet-card fade-up stagger-2">
-        <div class="fleet-price">£0</div>
-        <div class="fleet-price-label">Ongoing AdBlue Repair Costs.</div>
-        <div class="fleet-price-desc">We remove the hassle and expense of AdBlue systems. No more warning lights, limp mode, or costly repairs. One fix. Long-term savings.</div>
-        <div class="fleet-tags">
-          <span class="fleet-tag">Ford Transit</span>
-          <span class="fleet-tag">Transit Custom</span>
-          <span class="fleet-tag">Mercedes Sprinter</span>
-          <span class="fleet-tag">VW Crafter</span>
-        </div>
+      <div class="fleet-single fade-up">
+        <div class="fleet-single-title"><span>Your vans stay<br>on the road.</span></div>
+        <div class="fleet-single-desc">Fully mobile remapping across your whole fleet — on your site, on your schedule.</div>
       </div>
     </div>
   </section>
@@ -3511,11 +3496,8 @@
     const stockBhpRaw = data.bhp != null ? Number(data.bhp) : null;
     const stockNmRaw  = data.nm  != null ? Number(data.nm)  : null;
 
-    // ── Fuel — use match.fuel (from the actual database entry) as authoritative.
-    // data.fuel comes from the API (checkcardetails/DVLA) and may be wrong when the
-    // user manually selects a different variant via the "Not your model?" dropdown.
-    const resolvedFuel = (data.match && data.match.fuel) ? data.match.fuel : (data.fuel || '');
-    const fuelLc = resolvedFuel.toLowerCase();
+    // Stage 1 calc — diesel +22% bhp / +20% nm, petrol/other +18% / +18%.
+    const fuelLc = (data.fuel || '').toLowerCase();
     const isDiesel = fuelLc.includes('diesel');
     const bhpMult = isDiesel ? 1.22 : 1.18;
     const nmMult  = isDiesel ? 1.20 : 1.18;
@@ -3531,8 +3513,8 @@
     const modelV2 = data.model_v2 ? ' ' + String(data.model_v2).toUpperCase() : '';
     s('res-make-model', makeModel + modelV2);
 
-    // ── Fuel display — use resolvedFuel (match.fuel takes priority over API fuel)
-    s('res-fuel', resolvedFuel || '—');
+    // ── Fuel
+    s('res-fuel', data.fuel || '—');
 
     // ── Engine display: e.g. "2.0L (1968cc)"
     if (data.engine_cc) {
@@ -3591,9 +3573,9 @@
       s('res-gain-nm', '—');
     }
 
-    // ── "Not your model?" two-step dropdown — always shown after every result.
-    // Fetches all models for this make from /api/alternates (database only, not API).
-    // Pre-selects the closest model match to what the API returned.
+    // ── "Not your model?" two-step dropdown — only when model couldn't be detected.
+    // Worker returns alternates: [{ model, model_lc, variants: [...] }, ...]
+    // Step 1 picks model, Step 2 picks variant. Auto-pre-selects the worker's primary guess.
     renderAlternatesDropdown(reg, data);
 
     if(trust) trust.style.display='none';
@@ -3603,22 +3585,16 @@
     panel.classList.remove('visible'); void panel.offsetWidth; panel.classList.add('visible');
   }
 
-  // Render the "Not your model?" dropdown — always shown after every result.
-  // Fetches all models for this make from /api/alternates (our database only).
-  // Pre-selects the model that best matches what the API returned.
+  // Render (or remove) the "Not your model?" dropdown above the reset button.
+  // When the user picks model+variant, we re-fetch via /api/lookup-explicit.
   function renderAlternatesDropdown(reg, data) {
+    // Always clear anchor before re-rendering
     const anchor = document.getElementById('vrm-alternates-anchor');
     if (anchor) anchor.innerHTML = '';
-    const effectiveMake = data._originalMake || data.make;
-    if (!anchor || !effectiveMake) return;
 
-    const selectCss =
-      'flex:1;min-width:140px;padding:8px 10px;' +
-      'background:#0a0a0b;color:#fff;' +
-      'border:1px solid rgba(232,0,29,0.4);border-radius:6px;' +
-      'font-family:var(--font-body);font-size:12px;cursor:pointer;';
+    if (!data.alternates || data.alternates.length === 0) return;
+    if (!anchor) return;
 
-    // Build wrapper
     const wrap = document.createElement('div');
     wrap.id = 'vrm-alternates';
     wrap.style.cssText =
@@ -3640,165 +3616,117 @@
       '<span>Not your model?</span>';
 
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
+    row.style.cssText =
+      'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
 
+    // Step 1 — model dropdown
     const modelSel = document.createElement('select');
     modelSel.id = 'vrm-alt-model';
-    modelSel.style.cssText = selectCss;
+    modelSel.style.cssText =
+      'flex:1;min-width:160px;padding:8px 12px;' +
+      'background:#0a0a0b;color:#fff;' +
+      'border:1px solid rgba(232,0,29,0.4);border-radius:6px;' +
+      'font-family:var(--font-body);font-size:13px;cursor:pointer;';
 
+    // Pre-select the worker's primary pick (data.model)
+    const primaryModel = (data.model || '').toLowerCase();
+    let primaryAltIdx = 0;
+    data.alternates.forEach((alt, i) => {
+      const opt = document.createElement('option');
+      opt.value = alt.model_lc;
+      opt.textContent = alt.model;
+      modelSel.appendChild(opt);
+      if (alt.model_lc === primaryModel || alt.model.toLowerCase() === primaryModel) {
+        primaryAltIdx = i;
+      }
+    });
+    modelSel.selectedIndex = primaryAltIdx;
+
+    // Step 2 — variant dropdown (populated based on selected model)
     const variantSel = document.createElement('select');
     variantSel.id = 'vrm-alt-variant';
-    variantSel.style.cssText = selectCss;
+    variantSel.style.cssText = modelSel.style.cssText;
 
-    // Status indicator (spinner / tick) — shown inline after variant dropdown
-    const statusEl = document.createElement('span');
-    statusEl.id = 'vrm-alt-status';
-    statusEl.style.cssText = 'display:flex;align-items:center;flex-shrink:0;width:22px;height:22px;';
+    // Apply button
+    const applyBtn = document.createElement('button');
+    applyBtn.id = 'vrm-alt-apply';
+    applyBtn.type = 'button';
+    applyBtn.textContent = 'Apply';
+    applyBtn.style.cssText =
+      'padding:8px 16px;background:var(--red);color:#fff;' +
+      'border:none;border-radius:6px;font-family:var(--font-display);' +
+      'font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;' +
+      'cursor:pointer;';
 
-    function setStatus(state) {
-      if (state === 'idle') {
-        statusEl.innerHTML = '';
-      } else if (state === 'loading') {
-        statusEl.innerHTML = `
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="animation:vrm-spin 0.7s linear infinite;">
-            <circle cx="9" cy="9" r="7" stroke="rgba(232,0,29,0.25)" stroke-width="2"/>
-            <path d="M9 2 A7 7 0 0 1 16 9" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
-          </svg>`;
-      } else if (state === 'done') {
-        statusEl.innerHTML = `
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="8" fill="rgba(26,122,58,0.15)" stroke="#1a7a3a" stroke-width="1.5"/>
-            <path d="M5.5 9 L7.5 11 L12.5 6" stroke="#1a7a3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              style="stroke-dasharray:10;stroke-dashoffset:10;animation:vrm-draw 0.3s ease forwards;"/>
-          </svg>`;
-      }
+    function populateVariants(alt, preselectKw) {
+      variantSel.innerHTML = '';
+      // Pre-select primary kW if available, else the highest-kW option
+      let preselectIdx = 0;
+      let highestKw = -1, highestIdx = 0;
+      alt.variants.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = v.kw;
+        opt.dataset.label = v.label;
+        opt.textContent = v.label;
+        variantSel.appendChild(opt);
+        if (preselectKw && v.kw === preselectKw) preselectIdx = i;
+        if (v.kw > highestKw) { highestKw = v.kw; highestIdx = i; }
+      });
+      // If preselectKw not found, fall back to highest kW (sensible default)
+      variantSel.selectedIndex = preselectKw ? preselectIdx : highestIdx;
     }
 
-    if (!document.getElementById('vrm-apply-keyframes')) {
-      const kf = document.createElement('style');
-      kf.id = 'vrm-apply-keyframes';
-      kf.textContent = `
-        @keyframes vrm-spin { to { transform: rotate(360deg); } }
-        @keyframes vrm-draw { to { stroke-dashoffset: 0; } }
-      `;
-      document.head.appendChild(kf);
-    }
+    const initialAlt = data.alternates[primaryAltIdx];
+    const initialKw = (data.match && data.match.bhp != null && initialAlt)
+      ? (initialAlt.variants.find(v => Math.round(v.bhp) === Math.round(data.match.bhp)) || {}).kw
+      : null;
+    populateVariants(initialAlt, initialKw);
 
-    // Show loading placeholders while fetching models
-    modelSel.innerHTML = '<option>Loading models…</option>';
-    variantSel.innerHTML = '<option>—</option>';
+    // When model changes, repopulate variants
+    modelSel.addEventListener('change', () => {
+      const alt = data.alternates.find(a => a.model_lc === modelSel.value);
+      if (alt) populateVariants(alt, null);
+    });
 
-    row.appendChild(modelSel);
-    row.appendChild(variantSel);
-    row.appendChild(statusEl);
-    wrap.appendChild(headline);
-    wrap.appendChild(row);
-    anchor.appendChild(wrap);
-
-    async function doLookup(altModel, altKw) {
-      setStatus('loading');
-      modelSel.disabled = true;
-      variantSel.disabled = true;
+    // Apply: re-fetch with explicit make/model/kw
+    applyBtn.addEventListener('click', async () => {
+      const altModel = modelSel.value;
+      const altKw = Number(variantSel.value);
+      if (!altModel || !altKw) return;
+      applyBtn.textContent = 'Loading...';
+      applyBtn.disabled = true;
       try {
         const url =
           `${VRM_API_BASE}/api/lookup-explicit?vrm=${encodeURIComponent(reg)}` +
-          `&make=${encodeURIComponent(effectiveMake)}` +
+          `&make=${encodeURIComponent(data.make)}` +
           `&model=${encodeURIComponent(altModel)}` +
           `&kw=${altKw}`;
         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
         const newPayload = await res.json();
         if (!res.ok || newPayload.error) {
-          setStatus('idle');
-          modelSel.disabled = false;
-          variantSel.disabled = false;
+          applyBtn.textContent = 'Apply';
+          applyBtn.disabled = false;
+          alert(newPayload.error || 'Lookup failed.');
           return;
         }
-        setStatus('done');
-        newPayload._originalMake = effectiveMake;
-        setTimeout(() => { showResult(reg, newPayload); }, 600);
+        // Carry over the original alternates so user can keep correcting
+        newPayload.alternates = data.alternates;
+        showResult(reg, newPayload);
       } catch (err) {
-        setStatus('idle');
-        modelSel.disabled = false;
-        variantSel.disabled = false;
+        applyBtn.textContent = 'Apply';
+        applyBtn.disabled = false;
+        alert('Network error.');
       }
-    }
+    });
 
-    // Fetch all models for this make from our database
-    fetch(`${VRM_API_BASE}/api/alternates?make=${encodeURIComponent(effectiveMake)}`, {
-      headers: { 'Accept': 'application/json' }
-    })
-    .then(r => r.json())
-    .then(res => {
-      const alternates = res.alternates || [];
-      if (alternates.length === 0) { wrap.remove(); return; }
+    row.appendChild(modelSel);
+    row.appendChild(variantSel);
+    row.appendChild(applyBtn);
+    wrap.appendChild(headline);
+    wrap.appendChild(row);
 
-      modelSel.innerHTML = '';
-
-      // Find best matching model: exact match first, then startsWith, then includes
-      const apiModelLc = (data.model || '').toLowerCase().trim();
-      let bestIdx = 0;
-      let bestScore = -1;
-      alternates.forEach((alt, i) => {
-        const altLc = alt.model_lc;
-        let score = 0;
-        if (altLc === apiModelLc) score = 3;
-        else if (apiModelLc.startsWith(altLc) || altLc.startsWith(apiModelLc)) score = 2;
-        else if (altLc.includes(apiModelLc) || apiModelLc.includes(altLc)) score = 1;
-        if (score > bestScore) { bestScore = score; bestIdx = i; }
-      });
-
-      alternates.forEach((alt, i) => {
-        const opt = document.createElement('option');
-        opt.value = alt.model_lc;
-        opt.textContent = alt.model;
-        modelSel.appendChild(opt);
-      });
-      modelSel.selectedIndex = bestIdx;
-
-      function populateVariants(alt) {
-        variantSel.innerHTML = '';
-        const currentBhp = data.bhp != null ? Math.round(Number(data.bhp)) : null;
-        const currentFuel = (data.match && data.match.fuel) ? data.match.fuel.toLowerCase() : (data.fuel || '').toLowerCase();
-        let bestVIdx = 0;
-        let bestVScore = -1;
-        alt.variants.forEach((v, i) => {
-          const opt = document.createElement('option');
-          opt.value = v.kw;
-          opt.textContent = v.label;
-          variantSel.appendChild(opt);
-          let score = 0;
-          if (currentBhp && Math.abs(Math.round(v.bhp) - currentBhp) <= 2) score += 2;
-          if (currentFuel && v.fuel && v.fuel.toLowerCase() === currentFuel) score += 1;
-          if (score > bestVScore) { bestVScore = score; bestVIdx = i; }
-        });
-        variantSel.selectedIndex = bestVIdx;
-      }
-
-      populateVariants(alternates[bestIdx]);
-
-      // Model change → repopulate variants; if only 1 variant, auto-fetch immediately
-      modelSel.addEventListener('change', () => {
-        setStatus('idle');
-        const alt = alternates.find(a => a.model_lc === modelSel.value);
-        if (!alt) return;
-        populateVariants(alt);
-        // If only one variant, fetch straight away (no variant change event will fire)
-        if (alt.variants.length === 1) {
-          doLookup(modelSel.value, Number(variantSel.value));
-        }
-      });
-
-      // Variant change → auto-fetch and update result
-      // Use both 'change' and track manual selection via pointerup for same-option re-select
-      function triggerVariantLookup() {
-        const altModel = modelSel.value;
-        const altKw = Number(variantSel.value);
-        if (!altModel || !altKw) return;
-        doLookup(altModel, altKw);
-      }
-      variantSel.addEventListener('change', triggerVariantLookup);
-    })
-    .catch(() => { wrap.remove(); });
+    // Mount into anchor above Engine Variant
+    anchor.appendChild(wrap);
   }
 
   // Show a friendly error/not-found message under the search button.
